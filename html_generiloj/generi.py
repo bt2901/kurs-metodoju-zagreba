@@ -10,6 +10,12 @@ import genanki
 import jinja2
 import mistune
 
+TOTAL_N = 2
+
+
+def join_morphemes(yaml_str):
+    return ''.join([list(m.keys())[0] for m in yaml_str])
+
 
 def render_page(name, enhavo, vojprefikso, env):
     rendered = env.get_template(name + '.html').render(
@@ -30,6 +36,45 @@ def write_file(filename, content):
 
 def aldonu_karton(deck, model, enhavo, radiko, leciono=None):
     # Ne kreu de tiuj vortspecoj.
+
+    esperanta_karto = radiko
+
+    # # Aldonu finaĵon.
+    # if radiko in enhavo['finajxoj']:
+    #     esperanta_karto = esperanta_karto + enhavo['finajxoj'][radiko]
+
+    #if enhavo['vortaro'][radiko]['vortspeco'] in ['sufikso', 'finajxo']:
+    #    esperanta_karto = '-' + esperanta_karto
+
+    # fontlingva_karto = enhavo['vortaro'][radiko]['tradukajxo']
+    fontlingva_karto = "Translation"
+    if isinstance(fontlingva_karto, list):
+        fontlingva_karto = ', '.join(fontlingva_karto)
+
+        # Ne kreu karton se iu de ili malplenas.
+    if not esperanta_karto or not fontlingva_karto:
+        return deck
+
+    # tags = [enhavo['vortaro'][radiko]['vortspeco'].replace(' ', '_')]
+    tags = ["Noun"]
+    if leciono:
+        tags.append(leciono)
+
+    note = genanki.Note(
+        model=model,
+        tags=tags,
+        fields=[
+            esperanta_karto,
+            fontlingva_karto
+        ]
+    )
+    deck.add_note(note)
+
+    return deck
+
+def aldonu_karton__(deck, model, enhavo, radiko, leciono=None):
+    # Ne kreu de tiuj vortspecoj.
+
     if enhavo['vortaro'][radiko]['vortspeco'] in ['interjekcio', 'nomo', 'vorto']:
         return deck
 
@@ -123,7 +168,7 @@ def generate_html(lingvo, enhavo, args):
     md = mistune.Markdown()
 
     env = jinja2.Environment()
-    env.filters['markdown'] = lambda text: jinja2.Markup(md(text))
+    env.filters['markdown'] = lambda text: jinja2.utils.markupsafe.Markup(md(text))
     env.trim_blocks = True
     env.lstrip_blocks = True
     env.loader = jinja2.FileSystemLoader('html_generiloj/templates/')
@@ -170,7 +215,7 @@ def generate_html(lingvo, enhavo, args):
 
     paths_index = 0
 
-    for i in range(1, 13):
+    for i in range(1, TOTAL_N):
         i_padded = str(i).zfill(2)
         leciono_dir = output_path + i_padded
 

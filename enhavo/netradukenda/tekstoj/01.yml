@@ -1,258 +1,1151 @@
 titolo: 
-  - 
-    - Amik
-    - o 
-  -
-  -
-    - Marko
+    - token:
+        lemma: v
+        morfemes:
+         - V: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - PARK: stem
+         - U: masc NOUN sing loct
+    -  
+    - token:
+        lemma: kultura
+        morfemes:
+         - KULTUR: stem
+         - Y: femn NOUN nomn plur
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - I: stem
+    -  
+    - token:
+        lemma: oddyh
+        morfemes:
+         - ODDYH: stem
+         - A: masc NOUN sing gent
+
 paragrafoj:
   -
-    -
-      - Marko
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - mi
-      - a
-    -
-    -
-      - amik
-      - o
-    - '.'
-    -
-    -
-      - Li
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - lern
-      - ant
-      - o
-    -
-    -
-      - kaj
-    -
-    -
-      - sport
-      - ist
-      - o
-    - '.'
-    -
-    -
-      - Li
-    -
-    -
-      - nun
-    -
-    -
-      - sid
-      - as
-    -
-    -
-      - en
-    -
-    -
-      - ĉambr
-      - o
-    -
-    -
-      - kaj
-    -
-    -
-      - lern
-      - as
-    - '.'
-    -
-    -
-      - Sur
-    -
-    -
-      - tabl
-      - o
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - paper
-      - o
-      - j
-    -
-    -
-      - kaj
-    -
-    -
-      - libr
-      - o
-      - j
-    - '.'
-    -
-    -
-      - Ĝi
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - skrib
-      - o
-      - tabl
-      - o
-    - '.'
-    -
-    -
-      - La
-    -
-    -
-      - libr
-      - o
-      - j
-    -
-    -
-      - sur
-    -
-    -
-      - la
-    -
-    -
-      - tabl
-      - o
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - lern
-      - o
-      - libr
-      - o
-      - j
-    - '.'
-  -
-    -
-      - La
-    -
-    -
-      - patr
-      - o
-    -
-    -
-      - kaj
-    -
-    -
-      - la
-    -
-    -
-      - patr
-      - in
-      - o
-    -
-    -
-      - de
-    -
-    -
-      - mi
-      - a
-    -
-    -
-      - amik
-      - o
-    -
-    -
-      - ne
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - en
-    -
-    -
-      - la
-    -
-    -
-      - ĉambr
-      - o
-    - '.'
-    -
-    -
-      - Ili
-    -
-    -
-      - nun
-    -
-    -
-      - labor
-      - as
-    - '.'
-    -
-    -
-      - Li
-      - a
-    -
-    -
-      - patr
-      - o
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - labor
-      - ist
-      - o
-    - ','
-    -
-    -
-      - li
-    -
-    -
-      - labor
-      - as
-    -
-    -
-      - en
-    -
-    -
-      - hotel
-      - o
-    - '.'
-    -
-    -
-      - La
-    -
-    -
-      - patr
-      - in
-      - o
-    -
-    -
-      - instru
-      - as
-    - '.'
-    -
-    -
-      - Ŝi
-    -
-    -
-      - est
-      - as
-    -
-    -
-      - instru
-      - ist
-      - in
-      - o
-    - '.'
-  
+    - token:
+        lemma: v
+        morfemes:
+         - V: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - park: stem
+         - u: masc NOUN sing loct
+    -  
+    - token:
+        lemma: kultura
+        morfemes:
+         - kultur: stem
+         - y: femn NOUN nomn plur
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: oddyh
+        morfemes:
+         - oddyh: stem
+         - a: masc NOUN sing gent
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - je: NPRO pers form-regl anim accs plur neut
+    -  
+    - token:
+        lemma: napisati
+        morfemes:
+         - napi: stem
+         - sano: tran VERB perf neut past pssv V-ju
+    - token: ':'
+  - 
+    - token: '"'
+    - token:
+        lemma: tovariš
+        morfemes:
+         - Tovariš: stem
+         - i: masc anim NOUN nomn plur
+    - token: '!'
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - Lež: stem
+         - ati: intr VERB impf infn
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    -  
+    - token:
+        lemma: v
+        morfemes:
+         - v: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - park: stem
+         - u: masc NOUN sing loct
+    -  
+    - token:
+        lemma: kultura
+        morfemes:
+         - kultur: stem
+         - y: femn NOUN nomn plur
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: oddyh
+        morfemes:
+         - oddyh: stem
+         - a: masc NOUN sing gent
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jest: intr VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: kulturny
+        morfemes:
+         - kulturn: stem
+         - o: ADJF neut nomn sing anim
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - park: stem
+         - a: masc NOUN sing gent
+    -  
+    - token:
+        lemma: kultura
+        morfemes:
+         - kultur: stem
+         - y: femn NOUN nomn plur
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: oddyh
+        morfemes:
+         - oddyh: stem
+         - a: masc NOUN sing gent
+    - token: '"'
+  - 
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - i: intr VERB impf 3per sing pres
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    -  
+    - token:
+        lemma: v
+        morfemes:
+         - v: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - park: stem
+         - u: masc NOUN sing loct
+    -  
+    - token:
+        lemma: kultura
+        morfemes:
+         - kultur: stem
+         - y: femn NOUN nomn plur
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: oddyh
+        morfemes:
+         - oddyh: stem
+         - a: masc NOUN sing gent
+    - token: '.'
+    -  
+    - token:
+        lemma: začto
+        morfemes:
+         - Začto: stem
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - on: NPRO pers masc nomn sing anim
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - i: intr VERB impf 3per sing pres
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    - token: '?'
+    -  
+    - token:
+        lemma: či
+        morfemes:
+         - Či: stem
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: znati
+        morfemes:
+         - zna: stem
+         - je: tran VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: li
+        morfemes:
+         - li: stem
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - on: NPRO pers masc nomn sing anim
+    - token: ','
+    -  
+    - token:
+        lemma: že
+        morfemes:
+         - že: stem
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - ęt: intr VERB impf 3per plur pres
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    -  
+    - token:
+        lemma: jedino
+        morfemes:
+         - jedino: stem
+    -  
+    - token:
+        lemma: nekulturny
+        morfemes:
+         - nekulturn: stem
+         - i: ADJF masc nomn plur anim
+    - token: ','
+    -  
+    - token:
+        lemma: necivilizovany
+        morfemes:
+         - necivilizovan: stem
+         - i: ADJF masc nomn plur anim
+    -  
+    - token:
+        lemma: člověk
+        morfemes:
+         - ljudi: masc anim NOUN nomn plur
+    - token: '?'
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - on: NPRO pers masc nomn sing anim
+    -  
+    - token:
+        lemma: vědati
+        morfemes:
+         - věda: stem
+         - je: tran VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: tutoj
+        morfemes:
+         - tut: stem
+         - o: NPRO dem neut nomn sing anim
+    - token: ','
+    -  
+    - token:
+        lemma: ale
+        morfemes:
+         - ale: stem
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - mu: NPRO pers datv masc sing form-short
+    -  
+    - token:
+        lemma: vse
+        morfemes:
+         - vse: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jest: intr VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: jedin
+        morfemes:
+         - jedn: stem
+         - o: card NUMR neut nomn sing anim
+    - token: '.'
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - on: NPRO pers masc nomn sing anim
+    -  
+    - token:
+        lemma: ljubiti
+        morfemes:
+         - ljub: stem
+         - i: tran VERB impf 3per sing pres
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - ati: intr VERB impf infn
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: myzljiti
+        morfemes:
+         - myzlj: stem
+         - iti: tran VERB perf infn
+    -  
+    - token:
+        lemma: o
+        morfemes:
+         - o: stem
+    -  
+    - token:
+        lemma: ziťje
+        morfemes:
+         - ziťj: stem
+         - u: neut NOUN sing loct
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    -  
+    - token:
+        lemma: park
+        morfemes:
+         - park: stem
+         - a: masc NOUN sing gent
+    - token: ':'
+  - 
+    - token: '--'
+    -  
+    - token:
+        lemma: hlopec
+        morfemes:
+         - Hlop: stem
+         - če: masc anim NOUN sing voct
+    - token: ','
+    -  
+    - token:
+        lemma: čemu
+        morfemes:
+         - čemu: stem
+    -  
+    - token:
+        lemma: ty
+        morfemes:
+         - ty: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - iš: intr VERB impf sing pres 2per
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: zemja
+        morfemes:
+         - zemj: stem
+         - i: femn NOUN sing loct
+    - token: '?'
+    -  
+    - token:
+        lemma: ty
+        morfemes:
+         - ty: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesi: intr VERB impf sing pres 2per
+    -  
+    - token:
+        lemma: imati
+        morfemes:
+         - ima: stem
+         - l: auxv VF-2 impf VERB masc sing past
+    -  
+    - token:
+        lemma: znati
+        morfemes:
+         - zna: stem
+         - ti: tran VERB impf infn
+    - token: ','
+    -  
+    - token:
+        lemma: že
+        morfemes:
+         - že: stem
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - my: NPRO pers nomn plur
+    -  
+    - token:
+        lemma: imama
+        morfemes:
+         - imam: stem
+         - o: femn NOUN sing voct
+    -  
+    - token:
+        lemma: tut
+        morfemes:
+         - tut: stem
+    -  
+    - token:
+        lemma: lavka
+        morfemes:
+         - lavk: stem
+         - y: femn NOUN nomn plur
+    - token: '.'
+    -  
+    - token:
+        lemma: tovariš
+        morfemes:
+         - Tovariš: stem
+    -  
+    - token:
+        lemma: borodina
+        morfemes:
+         - Borodin: stem
+    -  
+    - token:
+        lemma: sidti
+        morfemes:
+         - s: stem
+         - idi: intr VERB impf impr 2per
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: lavka
+        morfemes:
+         - lavk: stem
+         - ě: femn NOUN sing loct
+    - token: '.'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - ja: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: siděti
+        morfemes:
+         - sid: stem
+         - ʒų: tran VERB perf sing pres V-ju 1per
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: lavka
+        morfemes:
+         - lavk: stem
+         - ě: femn NOUN sing loct
+    - token: '.'
+    -  
+    - token:
+        lemma: veś
+        morfemes:
+         - V: stem
+         - si: NPRO indef masc nomn plur anim
+    - token: ','
+    -  
+    - token:
+        lemma: s
+        morfemes:
+         - s: stem
+    -  
+    - token:
+        lemma: izključeńje
+        morfemes:
+         - izključeńj: stem
+         - em: neut NOUN ablt sing
+    -  
+    - token:
+        lemma: ty
+        morfemes:
+         - tebe: NPRO pers form-regl sing accs
+    - token: ','
+    -  
+    - token:
+        lemma: siděti
+        morfemes:
+         - sid: stem
+         - ęt: tran VERB perf 3per plur pres
+    -  
+    - token:
+        lemma: na
+        morfemes:
+         - na: stem
+    -  
+    - token:
+        lemma: lavka
+        morfemes:
+         - lavk: stem
+         - ah: femn NOUN loct plur
+    - token: '.'
+  - 
+    - token: '['
+    - token:
+        lemma: pauza
+        morfemes:
+         - pauz: stem
+         - a: femn NOUN nomn sing
+    - token: ','
+    -  
+    - token:
+        lemma: poka
+        morfemes:
+         - poka: stem
+    -  
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    -  
+    - token:
+        lemma: myslj
+        morfemes:
+         - myslj: stem
+         - i: femn NOUN nomn plur
+    - token: ']'
+  - 
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    - token: ':'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - mně: NPRO pers sing loct
+    -  
+    - token:
+        lemma: vse
+        morfemes:
+         - vse: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jest: intr VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: jedin
+        morfemes:
+         - jedn: stem
+         - o: card NUMR neut nomn sing anim
+    - token: '.'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - ja: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: mogti
+        morfemes:
+         - mo: stem
+         - gų: auxv VERB impf sing pres V-ju 1per
+    -  
+    - token:
+        lemma: siděti
+        morfemes:
+         - sidě: stem
+         - ti: tran VERB impf infn
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    - token: ':'
+    -  
+    - token:
+        lemma: začto
+        morfemes:
+         - Začto: stem
+    -  
+    - token:
+        lemma: ty
+        morfemes:
+         - ty: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: mogti
+        morfemes:
+         - mo: stem
+         - žeš: auxv VERB impf sing pres 2per
+    -  
+    - token:
+        lemma: siděti
+        morfemes:
+         - sidě: stem
+         - ti: tran VERB impf infn
+    - token: '?'
+  - 
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    - token: ':'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - ja: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: mogti
+        morfemes:
+         - mo: stem
+         - žem: auxv VERB impf sing pres V-m 1per
+    -  
+    - token:
+        lemma: siděti
+        morfemes:
+         - sidě: stem
+         - ti: tran VERB impf infn
+    - token: ','
+    -  
+    - token:
+        lemma: boa
+        morfemes:
+         - bo: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesm: intr VERB impf sing pres 1per
+    -  
+    - token:
+        lemma: slaby
+        morfemes:
+         - slab: stem
+         - y: ADJF masc nomn sing anim
+    - token: '.'
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesm: intr VERB impf sing pres 1per
+    -  
+    - token:
+        lemma: slaba
+        morfemes:
+         - slab: stem
+    - token: ','
+    -  
+    - token:
+        lemma: tovariš
+        morfemes:
+         - tovariš: stem
+         - u: masc anim NOUN sing loct
+    -  
+    - token:
+        lemma: direktor
+        morfemes:
+         - direktor: stem
+         - e: masc anim NOUN sing voct
+    - token: ','
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesm: intr VERB impf sing pres 1per
+    -  
+    - token:
+        lemma: slaby
+        morfemes:
+         - slab: stem
+         - y: ADJF masc nomn sing anim
+    -  
+    - token:
+        lemma: v
+        morfemes:
+         - v: stem
+    -  
+    - token:
+        lemma: rezultat
+        morfemes:
+         - rezultat: stem
+         - u: masc NOUN sing loct
+    -  
+    - token:
+        lemma: glåd
+        morfemes:
+         - glåd: stem
+         - a: masc NOUN sing gent
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    - token: ':'
+    -  
+    - token:
+        lemma: či
+        morfemes:
+         - Či: stem
+    -  
+    - token:
+        lemma: vědati
+        morfemes:
+         - věda: stem
+         - je: tran VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: li
+        morfemes:
+         - li: stem
+    -  
+    - token:
+        lemma: tvoj
+        morfemes:
+         - tvoj: stem
+    -  
+    - token:
+        lemma: otec
+        morfemes:
+         - ot: stem
+         - ec: masc anim NOUN nomn sing
+    - token: ','
+    -  
+    - token:
+        lemma: že
+        morfemes:
+         - že: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesi: intr VERB impf sing pres 2per
+    -  
+    - token:
+        lemma: slaby
+        morfemes:
+         - slab: stem
+         - y: ADJF masc nomn sing anim
+    -  
+    - token:
+        lemma: vslěd
+        morfemes:
+         - vslěd: stem
+    -  
+    - token:
+        lemma: glåd
+        morfemes:
+         - glåd: stem
+         - a: masc NOUN sing gent
+    - token: '?'
+  - 
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    - token: ':'
+    -  
+    - token:
+        lemma: otec
+        morfemes:
+         - Ot: stem
+         - ec: masc anim NOUN nomn sing
+    -  
+    - token:
+        lemma: vědati
+        morfemes:
+         - věda: stem
+         - je: tran VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: o
+        morfemes:
+         - o: stem
+    -  
+    - token:
+        lemma: toj
+        morfemes:
+         - t: stem
+         - om: NPRO dem masc sing loct
+    - token: ','
+    -  
+    - token:
+        lemma: no
+        morfemes:
+         - no: stem
+    -  
+    - token:
+        lemma: ale
+        morfemes:
+         - ale: stem
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - jemu: NPRO pers datv form-regl masc sing
+    -  
+    - token:
+        lemma: vse
+        morfemes:
+         - vse: stem
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jest: intr VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: jedin
+        morfemes:
+         - jedn: stem
+         - o: card NUMR neut nomn sing anim
+    - token: '.'
+    -  
+    - token:
+        lemma: veś
+        morfemes:
+         - Ve: stem
+         - ś: femn NOUN nomn sing
+    -  
+    - token:
+        lemma: den
+        morfemes:
+         - d: stem
+         - en: masc NOUN nomn sing V-flex-1
+    -  
+    - token:
+        lemma: on
+        morfemes:
+         - on: NPRO pers masc nomn sing anim
+    -  
+    - token:
+        lemma: ležati
+        morfemes:
+         - lež: stem
+         - i: intr VERB impf 3per sing pres
+    -  
+    - token:
+        lemma: v
+        morfemes:
+         - v: stem
+    -  
+    - token:
+        lemma: dom
+        morfemes:
+         - dom: stem
+         - u: masc NOUN sing loct
+    -  
+    - token:
+        lemma: i
+        morfemes:
+         - i: stem
+    -  
+    - token:
+        lemma: piti
+        morfemes:
+         - pi: stem
+         - je: tran VERB impf 3per sing pres
+    -  
+    - token:
+        lemma: alkohol
+        morfemes:
+         - alkohol: stem
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    - token: ':'
+    -  
+    - token: '['
+    - token:
+        lemma: s
+        morfemes:
+         - s: stem
+    -  
+    - token:
+        lemma: omŕžeńje
+        morfemes:
+         - omŕžeńj: stem
+         - em: neut NOUN ablt sing
+    - token: ']'
+    -  
+    - token:
+        lemma: kaky
+        morfemes:
+         - Kak: stem
+         - y: NPRO indef masc nomn sing anim
+    -  
+    - token:
+        lemma: žestoky
+        morfemes:
+         - žestok: stem
+         - y: ADJF masc nomn sing anim
+    -  
+    - token:
+        lemma: člověk
+        morfemes:
+         - člověk: masc anim NOUN nomn sing
+    - token: '!'
+  - 
+    - token:
+        lemma: vladimir
+        morfemes:
+         - Vladimir: stem
+    - token: ':'
+    -  
+    - token: '['
+    - token: 'sȯ'
+    -  
+    - token:
+        lemma: skrb
+        morfemes:
+         - skrb: stem
+         - jų: femn NOUN ablt sing
+    - token: ']'
+    -  
+    - token:
+        lemma: tovariš
+        morfemes:
+         - Tovariš: stem
+         - u: masc anim NOUN sing loct
+    -  
+    - token:
+        lemma: direktor
+        morfemes:
+         - direktor: stem
+         - e: masc anim NOUN sing voct
+    - token: ','
+    -  
+    - token:
+        lemma: nikto
+        morfemes:
+         - nik: stem
+         - to: NPRO indef nomn
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - mę: NPRO pers accs form-short sing
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: ljubiti
+        morfemes:
+         - ljub: stem
+         - i: tran VERB impf 3per sing pres
+    - token: '.'
+    -  
+    - token:
+        lemma: nikto
+        morfemes:
+         - Nik: stem
+         - to: NPRO indef nomn
+    -  
+    - token:
+        lemma: ne
+        morfemes:
+         - ne: stem
+    -  
+    - token:
+        lemma: råzuměti
+        morfemes:
+         - råzumě: stem
+         - je: tran VERB impf 3per sing pres V-ju
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - mene: NPRO pers form-regl sing accs
+    - token: '.'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - ja: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesm: intr VERB impf sing pres 1per
+    -  
+    - token:
+        lemma: sam
+        morfemes:
+         - sam: stem
+    - token: '.'
+    -  
+    - token:
+        lemma: ja
+        morfemes:
+         - ja: NPRO pers nomn sing
+    -  
+    - token:
+        lemma: byti
+        morfemes:
+         - jesm: intr VERB impf sing pres 1per
+    -  
+    - token:
+        lemma: jedin
+        morfemes:
+         - jedn: stem
+         - n: card NUMR masc nomn sing anim
+    - token: '.'
+  - 
+    - token:
+        lemma: direktor
+        morfemes:
+         - Direktor: stem
+    -  
+    - token:
+        lemma: plakati
+        morfemes:
+         - pla: stem
+         - če: intr VERB impf 3per sing pres
+    - token: '.'

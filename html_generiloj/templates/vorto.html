@@ -1,34 +1,38 @@
-{%- if vorto is string -%}
-  {{vorto}}
-{%- elif vorto is iterable -%}
+{% set morfemy = [] %}
+{%- if vorto.token is string -%}
+  {{vorto.token}}
+{%- elif not vorto.token -%}
+  {{" "}}
+{%- elif vorto.token is iterable -%}
   <a href="javascript:" data-toggle="popover" title="
-    {% set klavo = false %}
-    {% if vorto|join|lower in enhavo.vortaro -%}
-      {% set klavo = vorto|join|lower %}
-    {% elif vorto|join in enhavo.vortaro -%}
-      {% set klavo = vorto|join %}
-    {% endif %} 
-    {% include 'tradukajxo.html' %}
+    {% set klavo = vorto.token.lemma %}
+    {{klavo}}
   " data-content="
+    {% include 'tradukajxo.html' %}
     <table>
-    {# Loop only if there are multiple roots. #}
-    {% if vorto|length > 1 -%} 
-      {% for radiko in vorto -%} 
+    {% if vorto.token.morfemes|length > 0 -%} 
+      {% for one_mini_dict in vorto.token.morfemes -%} 
+        {% for morfema, smysl in one_mini_dict.items() -%} 
+        {% set pustota = morfemy.append( morfema ) %}
+
         <tr>
-          <td><em>{{radiko}}</em></td>
+        {% if smysl|lower == 'stem' -%} 
+          <td><em><strong>{{morfema}}</strong></em></td>
+          <td></td>
+        {% else %}
+          <td><em>{{morfema}}</em></td>
           <td>
-            {% if radiko|lower in enhavo.vortaro -%}
-              {% set klavo = radiko|lower %}
-            {% elif radiko in enhavo.vortaro -%}
-              {% set klavo = radiko %}
-            {% endif %} 
-            {% include 'tradukajxo.html' %}
+            {{smysl}}
           </td>
+        {% endif %} 
         </tr>
+      {%- endfor %}
       {%- endfor %}
     {% endif %} 
     </table>
   "
-  >{{vorto|join}}</a>
+  >{{morfemy|join}}</a>
 {%- else %} 
+  {{vorto}}
+
 {% endif -%} 

@@ -1,23 +1,9 @@
-- amikino: 
-  - friend
-  - female friend
-- labortablo: 
-  - work bench
-  - desk
-  - desktop
-  - workspace
-- esperantistino: 
-  - Esperantist
-  - female Esperantist
-- instruisto: teacher
-- hotelĉambro: hotel room
-- enskribi: 
-  - to register
-  - to inscribe
-  - to enlist
-- skribotablo: desk
-- lingvisto: 
-  - linguist
-- laboristino: 
-  - worker
-  - female worker
+- języky:
+  - languages
+- językověd: linguist
+- učitelj: teacher
+- učiteljka: female teacher
+- poučiti: 
+  - to instruct
+- naučiti:
+  - to teach

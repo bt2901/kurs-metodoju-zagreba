@@ -1,5 +1,11 @@
 {%- if klavo -%} 
-	{%- set tradukajxo = enhavo.vortaro[klavo]['tradukajxo'] -%}
+  {%- if klavo in enhavo.vortaro -%} 
+    {%- set tradukajxo = enhavo.vortaro[klavo]['tradukajxo'] -%}
+  {%- else -%}
+	{%- set tradukajxo = "PANIKA! " + klavo -%}
+
+  {%- endif -%} 
+  
 	{%- if tradukajxo is string -%}
 		{{ tradukajxo }}
 	{%- elif tradukajxo is iterable -%}

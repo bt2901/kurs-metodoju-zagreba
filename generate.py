@@ -10,6 +10,16 @@ import argparse
 import html_generiloj
 import leo_markdown
 
+TOTAL_N = 2
+import pickle
+
+def join_morphemes(yaml_str):
+    return ''.join([list(m.keys())[0] for m in yaml_str])
+
+def iskati(stroka, jezyk, sheet):
+    result = sheet[sheet[jezyk] == stroka]
+    return result.index.values.tolist()
+
 # remove resolver entries for On/Off/Yes/No
 # https://stackoverflow.com/a/36470466/52023
 for ch in "OoYyNn":
@@ -41,17 +51,23 @@ def get_markdown_headlines(s):
 def load(language, gramatiko_transpose_headlines=2):
     enhavo = {'lingvo': language, 'vortaro': {}}
 
+    from isv_nlp_utils.slovnik import get_slovnik, download_slovnik, prepare_slovnik
+    slovnik = get_slovnik()['words']
+    prepare_slovnik(slovnik)
+
     paths = glob.glob('enhavo/tradukenda/' + language + '/vortaro/*.yml')
     # Provo solvi
     # https://github.com/Esperanto/kurso-zagreba-metodo/issues/36
     # sed kauzas aliajn problemojn.
     # paths.append('enhavo/tradukenda/en/vortaro/vorto.yml')
     # print(paths)
-    for path in paths:
+
+    # for path in paths:
+    if False:
         dirs, filename = os.path.split(path)
         root, extension = os.path.splitext(filename)
         vortspeco = root.replace('_', ' ')
-        vortlisto = yaml.load(open(path).read(), yaml.Loader)
+        vortlisto = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         for esperante in vortlisto:
             fontlingve = vortlisto[esperante]
             vortlisto[esperante] = {
@@ -60,13 +76,13 @@ def load(language, gramatiko_transpose_headlines=2):
             }
         enhavo['vortaro'].update(vortlisto)
 
-    enhavo['finajxoj'] = yaml.load(open('enhavo/netradukenda/radikaj_finajxoj.yml').read(), yaml.Loader)
+    enhavo['finajxoj'] = yaml.load(open('enhavo/netradukenda/radikaj_finajxoj.yml', encoding="utf8").read(), yaml.Loader)
 
     enhavo['ordoj'] = {}
-    enhavo['ordoj']['cifero'] = yaml.load(open('enhavo/netradukenda/ordoj/cifero.yml'), yaml.Loader)
-    enhavo['ordoj']['monato'] = yaml.load(open('enhavo/netradukenda/ordoj/monato.yml'), yaml.Loader)
-    enhavo['ordoj']['sezono'] = yaml.load(open('enhavo/netradukenda/ordoj/sezono.yml'), yaml.Loader)
-    enhavo['ordoj']['tago_en_la_semajno'] = yaml.load(open('enhavo/netradukenda/ordoj/tago_en_la_semajno.yml'),
+    enhavo['ordoj']['cifero'] = yaml.load(open('enhavo/netradukenda/ordoj/cifero.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['monato'] = yaml.load(open('enhavo/netradukenda/ordoj/monato.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['sezono'] = yaml.load(open('enhavo/netradukenda/ordoj/sezono.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['tago_en_la_semajno'] = yaml.load(open('enhavo/netradukenda/ordoj/tago_en_la_semajno.yml', encoding="utf8"),
                                                       yaml.Loader)
 
     enhavo['fasado'] = {}
@@ -87,7 +103,7 @@ def load(language, gramatiko_transpose_headlines=2):
     lecionoj = []
     vortoj = {}
 
-    for i in range(1, 13):
+    for i in range(1, TOTAL_N):
         leciono = {
             'teksto': None,
             'gramatiko': None,
@@ -101,15 +117,18 @@ def load(language, gramatiko_transpose_headlines=2):
         }
 
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
-        leciono['teksto'] = yaml.load(open(path).read(), yaml.Loader)
+        leciono['teksto'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
+        with open(r"C:\dev\kurso-zagreba-metodo\leciono.pkl", "wb") as f:
+            pickle.dump(leciono, f)
 
         # Create a string of the lesson titles.
         titolo_string = ''
         for radikoj in leciono['teksto']['titolo']:
-            if radikoj:
-                titolo_string += ''.join(radikoj)
+            if type(radikoj) is dict:
+                radikoj = radikoj['token']
+                titolo_string += join_morphemes(radikoj['morfemes'])
             else:
-                titolo_string += ' '
+                titolo_string += " "
 
         leciono['teksto']['titolo_string'] = titolo_string
 
@@ -122,11 +141,14 @@ def load(language, gramatiko_transpose_headlines=2):
 
         for paragrafo in leciono['teksto']['paragrafoj']:
             for vorto in paragrafo:
-                if type(vorto) is list:
-                    for radiko in vorto:
-                        if not radiko.lower() in vortoj:
-                            leciono['vortoj']['teksto'].append(radiko)
-                            vortoj[radiko.lower()] = True
+                if not vorto:
+                    continue
+                vorto = vorto['token']
+                if type(vorto) is dict:
+                    radiko = vorto['lemma'].replace("dʒ", "đ")
+                    if not radiko.lower() in vortoj:
+                        leciono['vortoj']['teksto'].append(radiko)
+                        vortoj[radiko.lower()] = True
 
         path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
 
@@ -157,6 +179,21 @@ def load(language, gramatiko_transpose_headlines=2):
         lecionoj.append(leciono)
 
     enhavo['lecionoj'] = lecionoj
+    all_words = set()
+    for leciono in enhavo['lecionoj']:
+        all_words |= set(leciono['vortoj']['teksto'])
+
+    for isv_lemma in all_words:
+        found_indices = iskati(isv_lemma, "isv", slovnik)
+        if len(found_indices):
+            idx = found_indices[0]
+            translated_word = slovnik.loc[idx][language]
+            pos = slovnik.loc[idx]['partOfSpeech']
+            enhavo['vortaro'][isv_lemma] = {'tradukajxo': translated_word, 'vortspeco': pos}
+        else:
+            print(isv_lemma)
+    with open("enhavo.pkl", "wb") as f:
+        pickle.dump(enhavo, f)
 
     return enhavo
 
@@ -209,7 +246,7 @@ def get_cmdline_arguments():
 
 def main():
     args = get_cmdline_arguments()
-    lingvoj = yaml.load(open('agordoj/lingvoj.yml').read(), yaml.Loader)
+    lingvoj = yaml.load(open('agordoj/lingvoj.yml', encoding="utf8").read(), yaml.Loader)
     if args.eligformo == 'html':
         # if args.lingvo not in lingvoj.keys():
         #    sys.exit("'" + args.lingvo + "' ne estas havebla lingvokodo.")
