@@ -9,6 +9,7 @@ import os
 import argparse
 import html_generiloj
 import leo_markdown
+import lesson_builder
 
 TOTAL_N = 2
 import pickle
@@ -102,6 +103,7 @@ def load(language, gramatiko_transpose_headlines=2):
 
     lecionoj = []
     vortoj = {}
+    etm_morph = None
 
     for i in range(1, TOTAL_N):
         leciono = {
@@ -117,6 +119,21 @@ def load(language, gramatiko_transpose_headlines=2):
         }
 
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
+
+        # If a plaintext-ish Markdown source exists for this lesson, it's the
+        # source of truth: regenerate the tagged YAML from it (see
+        # lesson_builder.py, which replaces the manual tokenize/analyze/paste
+        # workflow that used to live in maintenance/uczebnik.ipynb). The YAML
+        # file stays as the intermediate build artifact that the rest of the
+        # pipeline (and any human inspecting a lesson) reads.
+        source_md_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_source.md'
+        if os.path.exists(source_md_path):
+            if etm_morph is None:
+                etm_morph = lesson_builder.get_etm_analyzer()
+            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph)
+            with open(path, 'w', encoding='utf8') as f:
+                yaml.dump(teksto, f, allow_unicode=True, default_flow_style=False)
+
         leciono['teksto'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         with open(r"C:\dev\kurso-zagreba-metodo\leciono.pkl", "wb") as f:
             pickle.dump(leciono, f)
