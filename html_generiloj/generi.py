@@ -30,7 +30,7 @@ def write_file(filename, content):
     dirname = os.path.dirname(filename)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         f.write(content)
 
 
@@ -168,7 +168,7 @@ def generate_html(lingvo, enhavo, args):
     md = mistune.Markdown()
 
     env = jinja2.Environment()
-    env.filters['markdown'] = lambda text: jinja2.utils.markupsafe.Markup(md(text))
+    env.filters['markdown'] = lambda text: jinja2.Markup(md(text))
     env.trim_blocks = True
     env.lstrip_blocks = True
     env.loader = jinja2.FileSystemLoader('html_generiloj/templates/')
