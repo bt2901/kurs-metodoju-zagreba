@@ -1,12 +1,12 @@
 <ul class="nav nav-tabs">
-  {% for id, href, caption in tabs %}
-    <li 
-      {% if id == active_tab %} 
+  {% for tab in tabs %}
+    <li
+      {% if tab.id == active_tab %}
         class="active"
       {% endif %}
       role="presentation"
     >
-    <a href="{{tab_vojprefikso}}{{href}}">{{caption}}</a>
+    <a href="{{tab_vojprefikso}}{{tab.href}}">{{tab.caption}}</a>
     </li>
   {% endfor %}
 </ul>

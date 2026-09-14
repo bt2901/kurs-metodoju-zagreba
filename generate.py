@@ -14,6 +14,56 @@ import lesson_builder
 TOTAL_N = 3
 import pickle
 
+# The tabs a lesson page shows by default, in the order the site has always
+# used. `template` names the html_generiloj/templates/<template>.html (and,
+# by convention, leo_markdown/templates/<template>.md) file that renders it;
+# `fasado_key` is the label looked up from that language's fasado for the
+# tab caption.
+DEFAULT_TABS = [
+    {'id': 'teksto', 'href': '', 'template': 'teksto', 'fasado_key': 'Teksto'},
+    {'id': 'vortoj', 'href': 'vortoj/', 'template': 'vortoj', 'fasado_key': 'Novaj vortoj'},
+    {'id': 'gramatiko', 'href': 'gramatiko/', 'template': 'gramatiko', 'fasado_key': 'Gramatiko'},
+    {'id': 'ekzerco1', 'href': 'ekzerco1/', 'template': 'ekzerco1', 'fasado_key': 'Ekzerco 1'},
+    {'id': 'ekzerco2', 'href': 'ekzerco2/', 'template': 'ekzerco2', 'fasado_key': 'Ekzerco 2'},
+    {'id': 'ekzerco3', 'href': 'ekzerco3/', 'template': 'ekzerco3', 'fasado_key': 'Ekzerco 3'},
+]
+DEFAULT_TABS_BY_ID = {tab['id']: tab for tab in DEFAULT_TABS}
+
+
+def build_lesson_tabs(i_padded, fasado, language):
+    """Build the ordered list of tabs a lesson page shows for `language`.
+
+    Normally this is just DEFAULT_TABS. A lesson can override the order,
+    drop tabs, or restrict a tab to specific L1s by providing
+    enhavo/netradukenda/tekstoj/lessonNN_tabs.yml -- a list of
+    `{id: <tab id>, for: [<language code>, ...]}` entries (`for` is
+    optional; omitting it means "visible to every language"). This is
+    build-glue/plumbing only: it doesn't decide what any lesson's tabs
+    *should* be, it just lets that decision be expressed per lesson.
+    """
+    override_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_tabs.yml'
+    if os.path.exists(override_path):
+        spec = yaml.load(open(override_path, encoding='utf8').read(), yaml.Loader) or []
+    else:
+        spec = [{'id': tab['id']} for tab in DEFAULT_TABS]
+
+    tabs = []
+    for entry in spec:
+        tab_id = entry['id']
+        if tab_id not in DEFAULT_TABS_BY_ID:
+            raise ValueError(
+                "%s: unknown tab id %r (expected one of %s)"
+                % (override_path, tab_id, ', '.join(DEFAULT_TABS_BY_ID))
+            )
+        allowed_for = entry.get('for')
+        if allowed_for and language not in allowed_for:
+            continue
+        tab = dict(DEFAULT_TABS_BY_ID[tab_id])
+        tab['caption'] = fasado[tab['fasado_key']]
+        tabs.append(tab)
+    return tabs
+
+
 def join_morphemes(yaml_str):
     return ''.join([list(m.keys())[0] for m in yaml_str])
 
@@ -117,6 +167,8 @@ def load(language, gramatiko_transpose_headlines=2):
             'cifre': i,
             'cxene': i_padded
         }
+
+        leciono['tabs'] = build_lesson_tabs(i_padded, enhavo['fasado'], language)
 
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
 
