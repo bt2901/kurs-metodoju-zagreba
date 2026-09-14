@@ -10,7 +10,7 @@ import genanki
 import jinja2
 import mistune
 
-TOTAL_N = 2
+TOTAL_N = 3
 
 
 def join_morphemes(yaml_str):

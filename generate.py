@@ -11,7 +11,7 @@ import html_generiloj
 import leo_markdown
 import lesson_builder
 
-TOTAL_N = 2
+TOTAL_N = 3
 import pickle
 
 def join_morphemes(yaml_str):
@@ -89,16 +89,16 @@ def load(language, gramatiko_transpose_headlines=2):
     enhavo['fasado'] = {}
     paths = glob.glob('enhavo/tradukenda/' + language + '/fasado/*.yml')
     for path in paths:
-        tradukajxoj = yaml.load(open(path).read(), yaml.Loader)
+        tradukajxoj = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         enhavo['fasado'].update(tradukajxoj)
 
     path = 'enhavo/tradukenda/' + language + '/enkonduko.md'
-    enkonduko = open(path).read()
+    enkonduko = open(path, encoding="utf8").read()
     # enkonduko = transpose_headlines(enkonduko, 1)
     enhavo['enkonduko'] = enkonduko
 
     path = 'enhavo/tradukenda/' + language + '/post.md'
-    enhavo['post'] = open(path).read()
+    enhavo['post'] = open(path, encoding="utf8").read()
     enhavo['post'] = transpose_headlines(enhavo['post'], 2)
 
     lecionoj = []
@@ -154,7 +154,7 @@ def load(language, gramatiko_transpose_headlines=2):
         leciono['vortoj']['pliaj'] = []
 
         path = 'enhavo/netradukenda/vortoj/' + i_padded + '.yml'
-        leciono['vortoj']['pliaj'] = yaml.load(open(path).read(), yaml.Loader)
+        leciono['vortoj']['pliaj'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
 
         for paragrafo in leciono['teksto']['paragrafoj']:
             for vorto in paragrafo:
@@ -169,7 +169,7 @@ def load(language, gramatiko_transpose_headlines=2):
 
         path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
 
-        gramatiko_teksto = open(path).read()
+        gramatiko_teksto = open(path, encoding="utf8").read()
         gramatiko_titoloj = get_markdown_headlines(gramatiko_teksto)
         gramatiko_teksto = transpose_headlines(gramatiko_teksto, gramatiko_transpose_headlines)
 
@@ -182,13 +182,13 @@ def load(language, gramatiko_transpose_headlines=2):
         ekzercoj = {}
 
         path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku/' + i_padded + '.yml'
-        ekzercoj['Traduku'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Traduku'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
         path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku-kaj-respondu/' + i_padded + '.yml'
-        ekzercoj['Traduku kaj respondu'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Traduku kaj respondu'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
         path = 'enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml'
-        ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
         # Covert from dict to list.
         leciono['ekzercoj'] = ekzercoj
