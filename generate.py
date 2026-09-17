@@ -27,15 +27,24 @@ DEFAULT_TABS = [
     {'id': 'ekzerco2', 'href': 'ekzerco2/', 'template': 'ekzerco2', 'fasado_key': 'Ekzerco 2'},
     {'id': 'ekzerco3', 'href': 'ekzerco3/', 'template': 'ekzerco3', 'fasado_key': 'Ekzerco 3'},
 ]
-DEFAULT_TABS_BY_ID = {tab['id']: tab for tab in DEFAULT_TABS}
+# Tabs a lesson can opt into via lessonNN_tabs.yml but that aren't part of
+# every lesson's default set -- usually because their content is inherently
+# per-L1 rather than translated (e.g. `elektu`'s source files live under
+# enhavo/tradukenda/<lang>/ekzercoj/elektu/ and are written independently
+# per language, not translated from a shared original).
+EXTRA_TABS = [
+    {'id': 'elektu', 'href': 'elektu/', 'template': 'ekzerco4', 'fasado_key': 'Elektu la ĝustan opcion'},
+]
+
+KNOWN_TABS_BY_ID = {tab['id']: tab for tab in DEFAULT_TABS + EXTRA_TABS}
 
 
 def build_lesson_tabs(i_padded, fasado, language):
     """Build the ordered list of tabs a lesson page shows for `language`.
 
     Normally this is just DEFAULT_TABS. A lesson can override the order,
-    drop tabs, or restrict a tab to specific L1s by providing
-    enhavo/netradukenda/tekstoj/lessonNN_tabs.yml -- a list of
+    drop tabs, add an EXTRA_TABS tab, or restrict any tab to specific L1s
+    by providing enhavo/netradukenda/tekstoj/lessonNN_tabs.yml -- a list of
     `{id: <tab id>, for: [<language code>, ...]}` entries (`for` is
     optional; omitting it means "visible to every language"). This is
     build-glue/plumbing only: it doesn't decide what any lesson's tabs
@@ -50,18 +59,51 @@ def build_lesson_tabs(i_padded, fasado, language):
     tabs = []
     for entry in spec:
         tab_id = entry['id']
-        if tab_id not in DEFAULT_TABS_BY_ID:
+        if tab_id not in KNOWN_TABS_BY_ID:
             raise ValueError(
                 "%s: unknown tab id %r (expected one of %s)"
-                % (override_path, tab_id, ', '.join(DEFAULT_TABS_BY_ID))
+                % (override_path, tab_id, ', '.join(KNOWN_TABS_BY_ID))
             )
         allowed_for = entry.get('for')
         if allowed_for and language not in allowed_for:
             continue
-        tab = dict(DEFAULT_TABS_BY_ID[tab_id])
+        tab = dict(KNOWN_TABS_BY_ID[tab_id])
         tab['caption'] = fasado[tab['fasado_key']]
         tabs.append(tab)
     return tabs
+
+
+def load_elektu_exercises(path):
+    """Parse a single-correct multiple-choice exercise file.
+
+    Source shape (compact, hand-authored): a list of {question, options}
+    entries where exactly one string in `options` is prefixed with '+' to
+    mark it the correct answer, e.g.:
+
+        - question: "..."
+          options: [+correct, wrong, wrong]
+
+    Returns a list of {'question': ..., 'options': [{'text', 'correct'}]}
+    with the leading '+' stripped and turned into a boolean.
+    """
+    raw = yaml.load(open(path, encoding='utf8').read(), yaml.Loader) or []
+    exercises = []
+    for item in raw:
+        options = []
+        for raw_option in item['options']:
+            correct = raw_option.startswith('+')
+            options.append({
+                'text': raw_option[1:] if correct else raw_option,
+                'correct': correct,
+            })
+        num_correct = sum(1 for option in options if option['correct'])
+        if num_correct != 1:
+            raise ValueError(
+                "%s: question %r has %d options marked correct (leading "
+                "'+'), expected exactly 1" % (path, item['question'], num_correct)
+            )
+        exercises.append({'question': item['question'], 'options': options})
+    return exercises
 
 
 def join_morphemes(yaml_str):
@@ -241,6 +283,10 @@ def load(language, gramatiko_transpose_headlines=2):
 
         path = 'enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml'
         ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
+
+        if any(tab['id'] == 'elektu' for tab in leciono['tabs']):
+            path = 'enhavo/tradukenda/' + language + '/ekzercoj/elektu/' + i_padded + '.yml'
+            ekzercoj['Elektu la ĝustan opcion'] = load_elektu_exercises(path)
 
         # Covert from dict to list.
         leciono['ekzercoj'] = ekzercoj
