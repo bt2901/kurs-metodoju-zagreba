@@ -23,7 +23,7 @@ from collections import Counter
 from razdel import tokenize
 from isv_nlp_utils import constants
 
-DEFAULT_DICT_PATH = os.environ.get('ISV_DICT_PATH', 'C:\\dev\\pymorphy2-dicts\\')
+DEFAULT_DICT_PATH = os.environ.get('ISV_DICT_PATH', 'C:\\dev\\ISV_pymorphy2_dicts\\pymorphy2-dicts\\')
 
 _TITLE_RE = re.compile(r'^#\s*(.+?)\s*\n+', re.UNICODE)
 

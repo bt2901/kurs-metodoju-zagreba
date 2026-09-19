@@ -1,4 +1,7 @@
 # DIALOG V KAFE
 
-"pomilujte, koliko kostuje sandvič i jedno kapučino?"
-"sandvič iz bělogo hlěba bųde kostovati 11 grošev, ale črny hlěb to je 12 grošev"
+– Pomilujte, koliko koštuje sandvič i jedno kapučino?
+– Sandvič iz bělogo hlěba bųde kostovati 11 grošev, ale črny hlěb to je 12 grošev.
+– Dobro, ja bųdų vzęti kapučino i běly sendvič.
+– Mně je potrěbno napisati vaše imę na čaše. Kako je vaše imę?
+– Zȯvem sę Nikola.

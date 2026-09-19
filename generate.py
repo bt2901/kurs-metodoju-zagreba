@@ -237,7 +237,10 @@ def load(language, gramatiko_transpose_headlines=2):
         for radikoj in leciono['teksto']['titolo']:
             if type(radikoj) is dict:
                 radikoj = radikoj['token']
-                titolo_string += join_morphemes(radikoj['morfemes'])
+                if 'morfemes' in radikoj:
+                    titolo_string += join_morphemes(radikoj['morfemes'])
+                else:
+                    titolo_string += radikoj
             else:
                 titolo_string += " "
 
