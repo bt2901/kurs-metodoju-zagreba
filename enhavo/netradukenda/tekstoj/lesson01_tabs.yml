@@ -1,8 +1,8 @@
+- id: gramatiko
 - id: teksto
 - id: vortoj
-- id: gramatiko
+- id: elektu
+  for: [ru, hr]
 - id: ekzerco1
 - id: ekzerco2
 - id: ekzerco3
-- id: elektu
-  for: [ru, hr]
