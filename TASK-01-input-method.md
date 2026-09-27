@@ -32,6 +32,10 @@ correctly-spelled form so the learner sees the target orthography.
 - https://www.lexilogos.com/keyboard/diacritics.htm — a "magic key" style
   diacritic-insertion virtual keyboard, relevant to the nice-to-have below
   (not the MVP itself).
+- https://isv.miraheze.org/wiki/MediaWiki:Gadget-im.js — source code of JS gadget 
+  reponsible for diacritic-management on the ISV wiki
+- http://luki.sdf-eu.org/txt/cs-encodings-faq.html — a table summarizing various semi-official standards (TeX and RFC 1345) for representing Czech and Slovak characters in an ASCII-friendly way
+
 
 ## Nice-to-have (separate, do NOT do now)
 
