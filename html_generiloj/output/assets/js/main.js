@@ -104,6 +104,34 @@ $('.forigu').click(function() {
 });
 
 
+// Single-correct multiple-choice exercises ("elektu"): unlike the
+// data-solvo text inputs above, a radio option has no typed value to
+// normalize -- correctness is just "is the checked option the one
+// flagged data-korekta=true".
+$('input[type=radio][data-korekta]').on('change', function() {
+  var group = $(this).closest('.form-group');
+  var correct = $(this).attr('data-korekta') === 'true';
+  if (correct) {
+    group.removeClass('has-error').addClass('has-success');
+  } else {
+    group.removeClass('has-success').addClass('has-error');
+  }
+});
+
+$('.solvu-elektu').click(function() {
+  var form_id = $(this).attr('data-form-id');
+  $('#form-' + form_id + ' .form-group').each(function() {
+    $(this).find('input[data-korekta="true"]').prop('checked', true).trigger('change');
+  });
+});
+
+$('.forigu-elektu').click(function() {
+  var form_id = $(this).attr('data-form-id');
+  $('#form-' + form_id + ' input[type=radio]').prop('checked', false);
+  $('#form-' + form_id + ' .form-group').removeClass('has-success has-error');
+});
+
+
 var currentLangCode = $('#lingvoelektilo').val();
 
 $('#lingvoelektilo').change(function(e) {

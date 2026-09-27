@@ -9,6 +9,109 @@ import os
 import argparse
 import html_generiloj
 import leo_markdown
+import lesson_builder
+
+TOTAL_N = 3
+import pickle
+
+# The tabs a lesson page shows by default, in the order the site has always
+# used. `template` names the html_generiloj/templates/<template>.html (and,
+# by convention, leo_markdown/templates/<template>.md) file that renders it;
+# `fasado_key` is the label looked up from that language's fasado for the
+# tab caption.
+DEFAULT_TABS = [
+    {'id': 'teksto', 'href': '', 'template': 'teksto', 'fasado_key': 'Teksto'},
+    {'id': 'vortoj', 'href': 'vortoj/', 'template': 'vortoj', 'fasado_key': 'Novaj vortoj'},
+    {'id': 'gramatiko', 'href': 'gramatiko/', 'template': 'gramatiko', 'fasado_key': 'Gramatiko'},
+    {'id': 'ekzerco1', 'href': 'ekzerco1/', 'template': 'ekzerco1', 'fasado_key': 'Ekzerco 1'},
+    {'id': 'ekzerco2', 'href': 'ekzerco2/', 'template': 'ekzerco2', 'fasado_key': 'Ekzerco 2'},
+    {'id': 'ekzerco3', 'href': 'ekzerco3/', 'template': 'ekzerco3', 'fasado_key': 'Ekzerco 3'},
+]
+# Tabs a lesson can opt into via lessonNN_tabs.yml but that aren't part of
+# every lesson's default set -- usually because their content is inherently
+# per-L1 rather than translated (e.g. `elektu`'s source files live under
+# enhavo/tradukenda/<lang>/ekzercoj/elektu/ and are written independently
+# per language, not translated from a shared original).
+EXTRA_TABS = [
+    {'id': 'elektu', 'href': 'elektu/', 'template': 'ekzerco4', 'fasado_key': 'Elektu la ĝustan opcion'},
+]
+
+KNOWN_TABS_BY_ID = {tab['id']: tab for tab in DEFAULT_TABS + EXTRA_TABS}
+
+
+def build_lesson_tabs(i_padded, fasado, language):
+    """Build the ordered list of tabs a lesson page shows for `language`.
+
+    Normally this is just DEFAULT_TABS. A lesson can override the order,
+    drop tabs, add an EXTRA_TABS tab, or restrict any tab to specific L1s
+    by providing enhavo/netradukenda/tekstoj/lessonNN_tabs.yml -- a list of
+    `{id: <tab id>, for: [<language code>, ...]}` entries (`for` is
+    optional; omitting it means "visible to every language"). This is
+    build-glue/plumbing only: it doesn't decide what any lesson's tabs
+    *should* be, it just lets that decision be expressed per lesson.
+    """
+    override_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_tabs.yml'
+    if os.path.exists(override_path):
+        spec = yaml.load(open(override_path, encoding='utf8').read(), yaml.Loader) or []
+    else:
+        spec = [{'id': tab['id']} for tab in DEFAULT_TABS]
+
+    tabs = []
+    for entry in spec:
+        tab_id = entry['id']
+        if tab_id not in KNOWN_TABS_BY_ID:
+            raise ValueError(
+                "%s: unknown tab id %r (expected one of %s)"
+                % (override_path, tab_id, ', '.join(KNOWN_TABS_BY_ID))
+            )
+        allowed_for = entry.get('for')
+        if allowed_for and language not in allowed_for:
+            continue
+        tab = dict(KNOWN_TABS_BY_ID[tab_id])
+        tab['caption'] = fasado[tab['fasado_key']]
+        tabs.append(tab)
+    return tabs
+
+
+def load_elektu_exercises(path):
+    """Parse a single-correct multiple-choice exercise file.
+
+    Source shape (compact, hand-authored): a list of {question, options}
+    entries where exactly one string in `options` is prefixed with '+' to
+    mark it the correct answer, e.g.:
+
+        - question: "..."
+          options: [+correct, wrong, wrong]
+
+    Returns a list of {'question': ..., 'options': [{'text', 'correct'}]}
+    with the leading '+' stripped and turned into a boolean.
+    """
+    raw = yaml.load(open(path, encoding='utf8').read(), yaml.Loader) or []
+    exercises = []
+    for item in raw:
+        options = []
+        for raw_option in item['options']:
+            correct = raw_option.startswith('+')
+            options.append({
+                'text': raw_option[1:] if correct else raw_option,
+                'correct': correct,
+            })
+        num_correct = sum(1 for option in options if option['correct'])
+        if num_correct != 1:
+            raise ValueError(
+                "%s: question %r has %d options marked correct (leading "
+                "'+'), expected exactly 1" % (path, item['question'], num_correct)
+            )
+        exercises.append({'question': item['question'], 'options': options})
+    return exercises
+
+
+def join_morphemes(yaml_str):
+    return ''.join([list(m.keys())[0] for m in yaml_str])
+
+def iskati(stroka, jezyk, sheet):
+    result = sheet[sheet[jezyk] == stroka]
+    return result.index.values.tolist()
 
 # remove resolver entries for On/Off/Yes/No
 # https://stackoverflow.com/a/36470466/52023
@@ -41,17 +144,23 @@ def get_markdown_headlines(s):
 def load(language, gramatiko_transpose_headlines=2):
     enhavo = {'lingvo': language, 'vortaro': {}}
 
+    from isv_nlp_utils.slovnik import get_slovnik, download_slovnik, prepare_slovnik
+    slovnik = get_slovnik()['words']
+    prepare_slovnik(slovnik)
+
     paths = glob.glob('enhavo/tradukenda/' + language + '/vortaro/*.yml')
     # Provo solvi
     # https://github.com/Esperanto/kurso-zagreba-metodo/issues/36
     # sed kauzas aliajn problemojn.
     # paths.append('enhavo/tradukenda/en/vortaro/vorto.yml')
     # print(paths)
-    for path in paths:
+
+    # for path in paths:
+    if False:
         dirs, filename = os.path.split(path)
         root, extension = os.path.splitext(filename)
         vortspeco = root.replace('_', ' ')
-        vortlisto = yaml.load(open(path).read(), yaml.Loader)
+        vortlisto = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         for esperante in vortlisto:
             fontlingve = vortlisto[esperante]
             vortlisto[esperante] = {
@@ -60,34 +169,35 @@ def load(language, gramatiko_transpose_headlines=2):
             }
         enhavo['vortaro'].update(vortlisto)
 
-    enhavo['finajxoj'] = yaml.load(open('enhavo/netradukenda/radikaj_finajxoj.yml').read(), yaml.Loader)
+    enhavo['finajxoj'] = yaml.load(open('enhavo/netradukenda/radikaj_finajxoj.yml', encoding="utf8").read(), yaml.Loader)
 
     enhavo['ordoj'] = {}
-    enhavo['ordoj']['cifero'] = yaml.load(open('enhavo/netradukenda/ordoj/cifero.yml'), yaml.Loader)
-    enhavo['ordoj']['monato'] = yaml.load(open('enhavo/netradukenda/ordoj/monato.yml'), yaml.Loader)
-    enhavo['ordoj']['sezono'] = yaml.load(open('enhavo/netradukenda/ordoj/sezono.yml'), yaml.Loader)
-    enhavo['ordoj']['tago_en_la_semajno'] = yaml.load(open('enhavo/netradukenda/ordoj/tago_en_la_semajno.yml'),
+    enhavo['ordoj']['cifero'] = yaml.load(open('enhavo/netradukenda/ordoj/cifero.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['monato'] = yaml.load(open('enhavo/netradukenda/ordoj/monato.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['sezono'] = yaml.load(open('enhavo/netradukenda/ordoj/sezono.yml', encoding="utf8"), yaml.Loader)
+    enhavo['ordoj']['tago_en_la_semajno'] = yaml.load(open('enhavo/netradukenda/ordoj/tago_en_la_semajno.yml', encoding="utf8"),
                                                       yaml.Loader)
 
     enhavo['fasado'] = {}
     paths = glob.glob('enhavo/tradukenda/' + language + '/fasado/*.yml')
     for path in paths:
-        tradukajxoj = yaml.load(open(path).read(), yaml.Loader)
+        tradukajxoj = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         enhavo['fasado'].update(tradukajxoj)
 
     path = 'enhavo/tradukenda/' + language + '/enkonduko.md'
-    enkonduko = open(path).read()
+    enkonduko = open(path, encoding="utf8").read()
     # enkonduko = transpose_headlines(enkonduko, 1)
     enhavo['enkonduko'] = enkonduko
 
     path = 'enhavo/tradukenda/' + language + '/post.md'
-    enhavo['post'] = open(path).read()
+    enhavo['post'] = open(path, encoding="utf8").read()
     enhavo['post'] = transpose_headlines(enhavo['post'], 2)
 
     lecionoj = []
     vortoj = {}
+    etm_morph = None
 
-    for i in range(1, 13):
+    for i in range(1, TOTAL_N):
         leciono = {
             'teksto': None,
             'gramatiko': None,
@@ -100,16 +210,39 @@ def load(language, gramatiko_transpose_headlines=2):
             'cxene': i_padded
         }
 
+        leciono['tabs'] = build_lesson_tabs(i_padded, enhavo['fasado'], language)
+
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
-        leciono['teksto'] = yaml.load(open(path).read(), yaml.Loader)
+
+        # If a plaintext-ish Markdown source exists for this lesson, it's the
+        # source of truth: regenerate the tagged YAML from it (see
+        # lesson_builder.py, which replaces the manual tokenize/analyze/paste
+        # workflow that used to live in maintenance/uczebnik.ipynb). The YAML
+        # file stays as the intermediate build artifact that the rest of the
+        # pipeline (and any human inspecting a lesson) reads.
+        source_md_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_source.md'
+        if os.path.exists(source_md_path):
+            if etm_morph is None:
+                etm_morph = lesson_builder.get_etm_analyzer()
+            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph)
+            with open(path, 'w', encoding='utf8') as f:
+                yaml.dump(teksto, f, allow_unicode=True, default_flow_style=False)
+
+        leciono['teksto'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
+        with open(r"C:\dev\kurso-zagreba-metodo\leciono.pkl", "wb") as f:
+            pickle.dump(leciono, f)
 
         # Create a string of the lesson titles.
         titolo_string = ''
         for radikoj in leciono['teksto']['titolo']:
-            if radikoj:
-                titolo_string += ''.join(radikoj)
+            if type(radikoj) is dict:
+                radikoj = radikoj['token']
+                if 'morfemes' in radikoj:
+                    titolo_string += join_morphemes(radikoj['morfemes'])
+                else:
+                    titolo_string += radikoj
             else:
-                titolo_string += ' '
+                titolo_string += " "
 
         leciono['teksto']['titolo_string'] = titolo_string
 
@@ -118,19 +251,22 @@ def load(language, gramatiko_transpose_headlines=2):
         leciono['vortoj']['pliaj'] = []
 
         path = 'enhavo/netradukenda/vortoj/' + i_padded + '.yml'
-        leciono['vortoj']['pliaj'] = yaml.load(open(path).read(), yaml.Loader)
+        leciono['vortoj']['pliaj'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
 
         for paragrafo in leciono['teksto']['paragrafoj']:
             for vorto in paragrafo:
-                if type(vorto) is list:
-                    for radiko in vorto:
-                        if not radiko.lower() in vortoj:
-                            leciono['vortoj']['teksto'].append(radiko)
-                            vortoj[radiko.lower()] = True
+                if not vorto:
+                    continue
+                vorto = vorto['token']
+                if type(vorto) is dict:
+                    radiko = vorto['lemma'].replace("dʒ", "đ")
+                    if not radiko.lower() in vortoj:
+                        leciono['vortoj']['teksto'].append(radiko)
+                        vortoj[radiko.lower()] = True
 
         path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
 
-        gramatiko_teksto = open(path).read()
+        gramatiko_teksto = open(path, encoding="utf8").read()
         gramatiko_titoloj = get_markdown_headlines(gramatiko_teksto)
         gramatiko_teksto = transpose_headlines(gramatiko_teksto, gramatiko_transpose_headlines)
 
@@ -143,13 +279,17 @@ def load(language, gramatiko_transpose_headlines=2):
         ekzercoj = {}
 
         path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku/' + i_padded + '.yml'
-        ekzercoj['Traduku'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Traduku'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
         path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku-kaj-respondu/' + i_padded + '.yml'
-        ekzercoj['Traduku kaj respondu'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Traduku kaj respondu'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
         path = 'enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml'
-        ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path), yaml.Loader)
+        ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
+
+        if any(tab['id'] == 'elektu' for tab in leciono['tabs']):
+            path = 'enhavo/tradukenda/' + language + '/ekzercoj/elektu/' + i_padded + '.yml'
+            ekzercoj['Elektu la ĝustan opcion'] = load_elektu_exercises(path)
 
         # Covert from dict to list.
         leciono['ekzercoj'] = ekzercoj
@@ -157,6 +297,21 @@ def load(language, gramatiko_transpose_headlines=2):
         lecionoj.append(leciono)
 
     enhavo['lecionoj'] = lecionoj
+    all_words = set()
+    for leciono in enhavo['lecionoj']:
+        all_words |= set(leciono['vortoj']['teksto'])
+
+    for isv_lemma in all_words:
+        found_indices = iskati(isv_lemma, "isv", slovnik)
+        if len(found_indices):
+            idx = found_indices[0]
+            translated_word = slovnik.loc[idx][language]
+            pos = slovnik.loc[idx]['partOfSpeech']
+            enhavo['vortaro'][isv_lemma] = {'tradukajxo': translated_word, 'vortspeco': pos}
+        else:
+            print(isv_lemma)
+    with open("enhavo.pkl", "wb") as f:
+        pickle.dump(enhavo, f)
 
     return enhavo
 
@@ -209,7 +364,7 @@ def get_cmdline_arguments():
 
 def main():
     args = get_cmdline_arguments()
-    lingvoj = yaml.load(open('agordoj/lingvoj.yml').read(), yaml.Loader)
+    lingvoj = yaml.load(open('agordoj/lingvoj.yml', encoding="utf8").read(), yaml.Loader)
     if args.eligformo == 'html':
         # if args.lingvo not in lingvoj.keys():
         #    sys.exit("'" + args.lingvo + "' ne estas havebla lingvokodo.")

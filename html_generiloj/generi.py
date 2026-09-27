@@ -10,6 +10,12 @@ import genanki
 import jinja2
 import mistune
 
+TOTAL_N = 3
+
+
+def join_morphemes(yaml_str):
+    return ''.join([list(m.keys())[0] for m in yaml_str])
+
 
 def render_page(name, enhavo, vojprefikso, env):
     rendered = env.get_template(name + '.html').render(
@@ -24,12 +30,51 @@ def write_file(filename, content):
     dirname = os.path.dirname(filename)
     if not os.path.exists(dirname):
         os.makedirs(dirname)
-    with open(filename, 'w') as f:
+    with open(filename, 'w', encoding='utf-8') as f:
         f.write(content)
 
 
 def aldonu_karton(deck, model, enhavo, radiko, leciono=None):
     # Ne kreu de tiuj vortspecoj.
+
+    esperanta_karto = radiko
+
+    # # Aldonu finaĵon.
+    # if radiko in enhavo['finajxoj']:
+    #     esperanta_karto = esperanta_karto + enhavo['finajxoj'][radiko]
+
+    #if enhavo['vortaro'][radiko]['vortspeco'] in ['sufikso', 'finajxo']:
+    #    esperanta_karto = '-' + esperanta_karto
+
+    # fontlingva_karto = enhavo['vortaro'][radiko]['tradukajxo']
+    fontlingva_karto = "Translation"
+    if isinstance(fontlingva_karto, list):
+        fontlingva_karto = ', '.join(fontlingva_karto)
+
+        # Ne kreu karton se iu de ili malplenas.
+    if not esperanta_karto or not fontlingva_karto:
+        return deck
+
+    # tags = [enhavo['vortaro'][radiko]['vortspeco'].replace(' ', '_')]
+    tags = ["Noun"]
+    if leciono:
+        tags.append(leciono)
+
+    note = genanki.Note(
+        model=model,
+        tags=tags,
+        fields=[
+            esperanta_karto,
+            fontlingva_karto
+        ]
+    )
+    deck.add_note(note)
+
+    return deck
+
+def aldonu_karton__(deck, model, enhavo, radiko, leciono=None):
+    # Ne kreu de tiuj vortspecoj.
+
     if enhavo['vortaro'][radiko]['vortspeco'] in ['interjekcio', 'nomo', 'vorto']:
         return deck
 
@@ -130,15 +175,6 @@ def generate_html(lingvo, enhavo, args):
 
     output_path = 'html_generiloj/output/' + lingvo + '/'
 
-    tabs = [
-        ('teksto', '', enhavo['fasado']['Teksto']),
-        ('vortoj', 'vortoj/', enhavo['fasado']['Novaj vortoj']),
-        ('gramatiko', 'gramatiko/', enhavo['fasado']['Gramatiko']),
-        ('ekzerco1', 'ekzerco1/', enhavo['fasado']['Ekzerco 1']),
-        ('ekzerco2', 'ekzerco2/', enhavo['fasado']['Ekzerco 2']),
-        ('ekzerco3', 'ekzerco3/', enhavo['fasado']['Ekzerco 3'])
-    ]
-
     if args.vojprefikso:
         vojprefikso = args.vojprefikso + lingvo + '/'
     else:
@@ -147,7 +183,6 @@ def generate_html(lingvo, enhavo, args):
     rendered = env.get_template('index.html').render(
         enhavo=enhavo,
         vojprefikso=vojprefikso,
-        tabs=tabs,
     )
 
     eligo[output_path + 'index.html'] = rendered
@@ -163,44 +198,43 @@ def generate_html(lingvo, enhavo, args):
     for tab_page in ['tabelvortoj', 'prepozicioj', 'konjunkcioj', 'afiksoj', 'diversajxoj', 'auxtoroj', 'post']:
         eligo[output_path + tab_page + '/index.html'] = render_page(tab_page, enhavo, vojprefikso, env)
 
-    paths = []
-    for i in range(1, 13):
-        for id, href, caption in tabs:
-            paths.append(vojprefikso + str(i).zfill(2) + '/' + href)
+    # Flatten each lesson's own (possibly different) tab list into one
+    # book-wide sequence, so prev/next paging can still walk across lesson
+    # boundaries even though lessons no longer all share one tab set.
+    flat_entries = []
+    for i in range(1, TOTAL_N):
+        for tab in enhavo['lecionoj'][i - 1]['tabs']:
+            flat_entries.append((i, tab))
 
-    paths_index = 0
-
-    for i in range(1, 13):
+    for entry_index, (i, tab) in enumerate(flat_entries):
         i_padded = str(i).zfill(2)
         leciono_dir = output_path + i_padded
+        tab_vojprefikso = vojprefikso + i_padded + '/'
 
-        for tab, href, caption in tabs:
+        previous_path = None
+        next_path = None
 
-            previous_path = None
-            next_path = None
+        if entry_index > 0:
+            prev_i, prev_tab = flat_entries[entry_index - 1]
+            previous_path = vojprefikso + str(prev_i).zfill(2) + '/' + prev_tab['href']
+        if entry_index < len(flat_entries) - 1:
+            next_i, next_tab = flat_entries[entry_index + 1]
+            next_path = vojprefikso + str(next_i).zfill(2) + '/' + next_tab['href']
 
-            tab_vojprefikso = vojprefikso + i_padded + '/'
+        tab_rendered = env.get_template(tab['template'] + '.html').render(
+            enhavo=enhavo,
+            leciono=enhavo['lecionoj'][i - 1],
+            leciono_index=i,
+            vojprefikso=vojprefikso,
+            tab_vojprefikso=tab_vojprefikso,
+            previous_path=previous_path,
+            next_path=next_path,
+            tabs=enhavo['lecionoj'][i - 1]['tabs'],
+            active_tab=tab['id'],
+            identigilo=i_padded + '/' + tab['href']
+        )
 
-            if paths_index > 0:
-                previous_path = paths[paths_index - 1]
-            if paths_index < len(paths) - 1:
-                next_path = paths[paths_index + 1]
-            paths_index += 1
-
-            tab_rendered = env.get_template(tab + '.html').render(
-                enhavo=enhavo,
-                leciono=enhavo['lecionoj'][i - 1],
-                leciono_index=i,
-                vojprefikso=vojprefikso,
-                tab_vojprefikso=tab_vojprefikso,
-                previous_path=previous_path,
-                next_path=next_path,
-                tabs=tabs,
-                active_tab=tab,
-                identigilo=i_padded + '/' + href
-            )
-
-            eligo[leciono_dir + '/' + href + '/' + '/index.html'] = tab_rendered
+        eligo[leciono_dir + '/' + tab['href'] + '/' + '/index.html'] = tab_rendered
 
     # Forigu nunan dosierujon.
     shutil.rmtree(output_path, ignore_errors=True)
