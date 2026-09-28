@@ -163,7 +163,31 @@ def create_anki(enhavo):
     return deck
 
 
+def copy_static_html_assets():
+    """Copy the hand-maintained, language-independent site assets (css/js/img/
+    audio, favicon, the site's root landing page) from html_assets/ -- a
+    normally-tracked directory -- into html_generiloj/output/, where the
+    generated per-language site expects to find them via relative links (see
+    layout.html). These files are source, not build output: generate_html()
+    never creates or edits them, and the per-language shutil.rmtree() below
+    only ever clears html_generiloj/output/<lingvo>/, so this copy is safe to
+    (re)run on every build without disturbing already-generated languages.
+    """
+    output_root = 'html_generiloj/output/'
+
+    for name in ('css', 'img', 'js', 'mp3', 'ogg'):
+        shutil.copytree(
+            os.path.join('html_assets', name),
+            os.path.join(output_root, 'assets', name),
+            dirs_exist_ok=True,
+        )
+    shutil.copyfile('html_assets/favicon.ico', output_root + 'favicon.ico')
+    shutil.copyfile('html_assets/index.html', output_root + 'index.html')
+
+
 def generate_html(lingvo, enhavo, args):
+    copy_static_html_assets()
+
     eligo = {}
     md = mistune.Markdown()
 

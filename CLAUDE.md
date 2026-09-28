@@ -105,6 +105,8 @@ There is no test suite and no linter configured in this repo currently.
 3. Depending on `--eligformo`, either `html_generiloj.generi.generate_html(...)` or `leo_markdown.package.kreu_md(...)` renders the `enhavo` dict through Jinja2 templates (`html_generiloj/templates/*.html` or `leo_markdown/templates/*.md`).
 4. `html_generiloj/generi.py` also builds an Anki deck via `genanki` (a git submodule at `genanki/`) and writes it to `<output>/<lang>/eksporto/<lang>.apkg`.
 
+`html_generiloj/output/` is entirely build output and is gitignored — except that historically a handful of hand-maintained, language-independent site files (css/js/img/audio, `favicon.ico`, the site's root landing page) lived there anyway, force-added to git despite the ignore rule, because their relative URLs need to resolve under the served output tree. Those files now live in the normally-tracked `html_assets/` at the repo root instead; `generi.py`'s `copy_static_html_assets()` copies them into `html_generiloj/output/` on every HTML build (before the per-language `shutil.rmtree`, which only ever clears `output/<lang>/` and never touches this shared copy). Treat `html_assets/` as source — edit files there, not their copies under `output/`.
+
 Per-lesson tabs in the generated site are: Teksto (text), Vortoj (new words), Gramatiko (grammar), and three exercise types (Traduku / Traduku kaj respondu / Kompletigu la frazojn), each with a `solvoN` (solution) counterpart in the Markdown output.
 
 ### Lesson-text source pipeline (`lesson_builder.py`)
