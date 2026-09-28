@@ -8,8 +8,13 @@ $(document).ready(function(){
   $('.container table').addClass('table'); 
 });
 
+// Legacy from the Esperanto-target version of this course: 'cx'/'gx'/...
+// digraphs -> ĉĝĵĥŝŭ, then a blunt lowercase-and-compare check. Superseded
+// below by IsvInputMethod for the current ISV-target exercises (see
+// TASK-01-input-method.md) -- kept only for reference, no longer wired into
+// the input[data-solvo] handler.
 function esperantigu(s) {
-  
+
     s = s.replace('cx', 'ĉ')
     s = s.replace('gx', 'ĝ')
     s = s.replace('jx', 'ĵ')
@@ -49,36 +54,42 @@ function selectNextTabbableOrFocusable(selector){
 }
 
 
+// ISV exercise fields: let the learner type without an ISV keyboard (see
+// TASK-01-input-method.md) via IsvInputMethod's digraph / RFC1345-suffix /
+// Alt-key input methods, and check answers with its diacritic-aware
+// comparison (a bare letter accepts any diacritic form of it, but a wrong
+// diacritic is rejected, unlike a blunt "strip all diacritics" compare).
+$('input[data-solvo]').each(function() {
+  var input = this;
+  IsvInputMethod.attachInputMethod(input, function() {
+    return $(input).attr('data-solvo');
+  });
+  // Small "you typed X, correct spelling is Y" hint, shown only once the
+  // field is marked correct and the learner's own spelling wasn't exact.
+  $('<span class="isv-solvo-hint text-muted"></span>').insertAfter($('#glyphicon-' + $(input).attr('id')));
+});
+
 $('input[data-solvo]').on('input', function() {
   var id = $(this).attr('id');
   var form_group = $('#form-group-' + id);
   var glyphicon = $('#glyphicon-' + id);
+  var hint = $(this).parent().find('.isv-solvo-hint');
 
-  // Get input and normalize.
   var input = $(this).val();
-  input = normalize(input);
+  var solvoField = $(this).attr('data-solvo');
+  var matched = IsvInputMethod.firstMatchingAlternative(input, solvoField);
 
-  // Split data-solvo to find solutions and normalize.
-  var solutions = $(this).attr('data-solvo').split(/\s*\|\s*/);
-  solutions = jQuery.map(solutions, normalize);
-
-	var correct = 
-	  // Input it part of solutions	
-		(jQuery.inArray(input, solutions) !== -1)
-	  ||
-		(input == normalize($(this).attr('data-solvo')));
-
-  if (correct) {
+  if (matched !== null) {
     form_group.removeClass('has-error').addClass('has-success');
     glyphicon.removeClass('glyphicon-remove').addClass('glyphicon-ok');
+    hint.text(matched === input.trim() ? '' : ' → ' + matched);
 		// Set focus on the current
-		// to not confuse it during the following step. 
+		// to not confuse it during the following step.
 		$(this).focus();
 		// Jump to the next input.
 		selectNextTabbableOrFocusable(':tabbable');
   } else {
-		console.log(input);
-		console.log($(this).attr('data-solvo'));
+    hint.text('');
     form_group.removeClass('has-success').addClass('has-error');
     glyphicon.removeClass('glyphicon-ok').addClass('glyphicon-remove');
   }
