@@ -1,35 +1,13 @@
-{% extends "layout.html" %}
+{% extends "ekzerco_base.html" %}
 
-{% block title %}
-	{{leciono_index}}. {{leciono.teksto.titolo_string}}
-	|
-	{{enhavo.fasado['Elektu la ĝustan opcion']}}
-	|
-  {{enhavo.fasado['Esperanto en 12 lecionoj']}}
-{% endblock %}
-
-{% block content %}
-
-  {% include 'pager.html' %}
-
-  <h2 id="leciono{{leciono_index}}">
-    {{leciono_index}}.
-    {% for vorto in leciono.teksto.titolo %}
-      {% include 'vorto.html' %}
-    {% endfor %}
-  </h2>
-
-  {% include 'tabs.html' %}
-
+{% block exercise %}
   {% set tasko = 'Elektu la ĝustan opcion' %}
-  {% set ekzerco_index = 4 %}
-  {% set form_id = leciono_index ~ '-' ~ ekzerco_index %}
 
   <h3 dir="{{enhavo.tekstodirekto}}"> {{enhavo.fasado[tasko]}} </h3>
 
   <form id="form-{{form_id}}">
 
-    {% for demando in leciono.ekzercoj[tasko] %}
+    {% for demando in unit['items'] %}
       {% set demando_loop = loop %}
       <div class="form-group">
         <label class="control-label" dir="{{enhavo.tekstodirekto}}">{{demando.question}}</label>
@@ -50,7 +28,4 @@
     <input type="button" class="btn btn-success solvu-elektu" value="{{enhavo.fasado['Solvu']}}" data-form-id="{{ form_id }}" />
     <input type="button" class="btn btn-danger forigu-elektu" value="{{enhavo.fasado['Forigu']}}" data-form-id="{{ form_id }}" />
   </form>
-
-  {% include 'pagxonumerado-komentejo.html' %}
-
 {% endblock %}

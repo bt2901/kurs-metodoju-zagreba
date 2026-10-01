@@ -1,52 +1,15 @@
-{% extends "layout.html" %}
+{% extends "ekzerco_base.html" %}
 
-{% block title %}
-	{{leciono_index}}. {{leciono.teksto.titolo_string}}
-	|
-	{{enhavo.fasado['Ekzerco 1']}}
-	|
-  {{enhavo.fasado['Esperanto en 12 lecionoj']}}
-{% endblock %}
-
-{% block content %}
-
-  {% include 'pager.html' %}
-
-  <h2 id="leciono{{leciono_index}}">
-    {{leciono_index}}.
-    {% for vorto in leciono.teksto.titolo %}
-      {% include 'vorto.html' %}
-    {% endfor %}
-  </h2>
-
-  {% include 'tabs.html' %}
-
+{% block exercise %}
   {% set tasko = 'Traduku' %}
-  {% set ekzerco_index = 1 %}
-  {% set form_id = leciono_index ~ '-' ~ ekzerco_index %}
 
   <h3 dir="{{enhavo.tekstodirekto}}"> {{enhavo.fasado[tasko]}} / {{tasko}} </h3>
 
-	<div class="panel-group">
-		<div class="panel panel-default">
-			<div class="panel-heading">
-				<a data-toggle="collapse" href="#teksto">
-					<h4 class="panel-title" dir="{{enhavo.tekstodirekto}}">
-						{{enhavo.fasado['Teksto']}}
-					</h4>
-				</a>
-			</div>
-			<div id="teksto" class="panel-collapse collapse">
-				<div class="panel-body">
-					{% include 'paragrafoj.html' %}
-				</div>
-			</div>
-		</div>
-	</div>
+  {% include 'teksto_panelo.html' %}
 
   <form id="form-{{form_id}}" class="form-horizontal">
 
-    {% for vico in leciono.ekzercoj[tasko] %}
+    {% for vico in unit['items'] %}
 
       {% set vico_loop = loop %}
       {% set id = 'vico-' ~ leciono_index ~ '-' ~ ekzerco_index ~ '-' ~ vico_loop.index %}
@@ -68,7 +31,4 @@
     <input type="button" class="btn btn-success solvu" value="{{enhavo.fasado['Solvu']}}" data-form-id="{{ form_id }}" />
     <input type="button" class="btn btn-danger forigu" value="{{enhavo.fasado['Forigu']}}" data-form-id="{{ form_id }}" />
   </form>
-  
-  {% include 'pagxonumerado-komentejo.html' %}
-
 {% endblock %}

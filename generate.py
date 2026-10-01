@@ -10,100 +10,92 @@ import argparse
 import html_generiloj
 import leo_markdown
 import lesson_builder
+import exercise_builder
 
 TOTAL_N = 3
 import pickle
 
-# The tabs a lesson page shows by default, in the order the site has always
-# used. `template` names the html_generiloj/templates/<template>.html (and,
-# by convention, leo_markdown/templates/<template>.md) file that renders it;
-# `fasado_key` is the label looked up from that language's fasado for the
-# tab caption.
-DEFAULT_TABS = [
-    {'id': 'teksto', 'href': '', 'template': 'teksto', 'fasado_key': 'Teksto'},
-    {'id': 'vortoj', 'href': 'vortoj/', 'template': 'vortoj', 'fasado_key': 'Novaj vortoj'},
-    {'id': 'gramatiko', 'href': 'gramatiko/', 'template': 'gramatiko', 'fasado_key': 'Gramatiko'},
-    {'id': 'ekzerco1', 'href': 'ekzerco1/', 'template': 'ekzerco1', 'fasado_key': 'Ekzerco 1'},
-    {'id': 'ekzerco2', 'href': 'ekzerco2/', 'template': 'ekzerco2', 'fasado_key': 'Ekzerco 2'},
-    {'id': 'ekzerco3', 'href': 'ekzerco3/', 'template': 'ekzerco3', 'fasado_key': 'Ekzerco 3'},
-]
-# Tabs a lesson can opt into via lessonNN_tabs.yml but that aren't part of
-# every lesson's default set -- usually because their content is inherently
-# per-L1 rather than translated (e.g. `elektu`'s source files live under
-# enhavo/tradukenda/<lang>/ekzercoj/elektu/ and are written independently
-# per language, not translated from a shared original).
-EXTRA_TABS = [
-    {'id': 'elektu', 'href': 'elektu/', 'template': 'ekzerco4', 'fasado_key': 'Elektu la ĝustan opcion'},
-]
-
-KNOWN_TABS_BY_ID = {tab['id']: tab for tab in DEFAULT_TABS + EXTRA_TABS}
+# A lesson's units (see exercise_builder.py) are its tabs, in order. Lessons
+# without a lessonNN_exercises.yml (see legacy_units) get this default set.
+DEFAULT_UNITS = [{'id': BUILTIN['id'], 'type': unit_type}
+                 for unit_type, BUILTIN in exercise_builder.BUILTIN_UNITS.items()]
 
 
-def build_lesson_tabs(i_padded, fasado, language):
-    """Build the ordered list of tabs a lesson page shows for `language`.
+def exercise_caption(unit, fasado, number):
+    """Tab caption for an exercise unit: its own `title`, else the type's
+    label (unnumbered types) or 'Ekzerco N' (numbered ones)."""
+    if unit.get('title'):
+        return unit['title']
+    exercise_type = exercise_builder.EXERCISE_TYPES[unit['type']]
+    if not exercise_type['numbered']:
+        return fasado[exercise_type['label']]
+    key = 'Ekzerco %d' % number
+    if key in fasado:
+        return fasado[key]
+    return fasado['Ekzerco 1'].replace('1', str(number))
 
-    Normally this is just DEFAULT_TABS. A lesson can override the order,
-    drop tabs, add an EXTRA_TABS tab, or restrict any tab to specific L1s
-    by providing enhavo/netradukenda/tekstoj/lessonNN_tabs.yml -- a list of
-    `{id: <tab id>, for: [<language code>, ...]}` entries (`for` is
-    optional; omitting it means "visible to every language"). This is
-    build-glue/plumbing only: it doesn't decide what any lesson's tabs
-    *should* be, it just lets that decision be expressed per lesson.
-    """
-    override_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_tabs.yml'
-    if os.path.exists(override_path):
-        spec = yaml.load(open(override_path, encoding='utf8').read(), yaml.Loader) or []
-    else:
-        spec = [{'id': tab['id']} for tab in DEFAULT_TABS]
 
+def build_tabs(units, fasado):
+    """One tab per unit, in order. Each tab carries its page template, URL
+    segment, caption, and (for exercises) the unit itself plus a per-lesson
+    exercise number used to keep DOM ids unique."""
     tabs = []
-    for entry in spec:
-        tab_id = entry['id']
-        if tab_id not in KNOWN_TABS_BY_ID:
-            raise ValueError(
-                "%s: unknown tab id %r (expected one of %s)"
-                % (override_path, tab_id, ', '.join(KNOWN_TABS_BY_ID))
-            )
-        allowed_for = entry.get('for')
-        if allowed_for and language not in allowed_for:
+    exercise_number = 0
+    caption_number = 0
+    for unit in units:
+        if unit['type'] in exercise_builder.BUILTIN_UNITS:
+            builtin = exercise_builder.BUILTIN_UNITS[unit['type']]
+            tabs.append({
+                'id': builtin['id'],
+                'href': builtin['href'],
+                'template': builtin['template'],
+                'caption': fasado[builtin['fasado_key']],
+                'unit': None,
+                'ekzerco_index': None,
+            })
             continue
-        tab = dict(KNOWN_TABS_BY_ID[tab_id])
-        tab['caption'] = fasado[tab['fasado_key']]
-        tabs.append(tab)
+        exercise_number += 1
+        if exercise_builder.EXERCISE_TYPES[unit['type']]['numbered']:
+            caption_number += 1
+        tabs.append({
+            'id': unit['id'],
+            'href': unit['id'] + '/',
+            'template': 'ex_' + unit['type'].replace('-', '_'),
+            'caption': exercise_caption(unit, fasado, caption_number),
+            'unit': unit,
+            'ekzerco_index': exercise_number,
+        })
     return tabs
 
 
-def load_elektu_exercises(path):
-    """Parse a single-correct multiple-choice exercise file.
+def legacy_units(language, i_padded):
+    """Units for a lesson that has no lessonNN_exercises.yml: the built-in
+    tabs plus the old per-type, per-language exercise files (already in
+    compiled form). Kept only until every lesson has an exercises file."""
+    def load_yml(path):
+        return yaml.load(open(path, encoding="utf8"), yaml.Loader)
 
-    Source shape (compact, hand-authored): a list of {question, options}
-    entries where exactly one string in `options` is prefixed with '+' to
-    mark it the correct answer, e.g.:
+    return DEFAULT_UNITS + [
+        {'id': 'ekzerco1', 'type': 'translate', 'title': None,
+         'items': load_yml('enhavo/tradukenda/' + language + '/ekzercoj/traduku/' + i_padded + '.yml')},
+        {'id': 'ekzerco2', 'type': 'cloze', 'title': None,
+         'items': load_yml('enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml')},
+        {'id': 'ekzerco3', 'type': 'translate-answer', 'title': None,
+         'items': load_yml('enhavo/tradukenda/' + language + '/ekzercoj/traduku-kaj-respondu/' + i_padded + '.yml')},
+    ]
 
-        - question: "..."
-          options: [+correct, wrong, wrong]
 
-    Returns a list of {'question': ..., 'options': [{'text', 'correct'}]}
-    with the leading '+' stripped and turned into a boolean.
-    """
-    raw = yaml.load(open(path, encoding='utf8').read(), yaml.Loader) or []
-    exercises = []
-    for item in raw:
-        options = []
-        for raw_option in item['options']:
-            correct = raw_option.startswith('+')
-            options.append({
-                'text': raw_option[1:] if correct else raw_option,
-                'correct': correct,
-            })
-        num_correct = sum(1 for option in options if option['correct'])
-        if num_correct != 1:
-            raise ValueError(
-                "%s: question %r has %d options marked correct (leading "
-                "'+'), expected exactly 1" % (path, item['question'], num_correct)
-            )
-        exercises.append({'question': item['question'], 'options': options})
-    return exercises
+def by_type_view(units):
+    """{type label: items} for the Markdown backend, which still expects one
+    exercise per type. Raises if a lesson has several of one type."""
+    view = {}
+    for unit in units:
+        if unit['type'] in exercise_builder.EXERCISE_TYPES:
+            label = exercise_builder.EXERCISE_TYPES[unit['type']]['label']
+            if label in view:
+                raise ValueError("the Markdown backend can't render two %r units in one lesson yet" % unit['type'])
+            view[label] = unit['items']
+    return view
 
 
 def join_morphemes(yaml_str):
@@ -201,7 +193,6 @@ def load(language, gramatiko_transpose_headlines=2):
         leciono = {
             'teksto': None,
             'gramatiko': None,
-            'ekzercoj': None,
         }
         i_padded = str(i).zfill(2)
 
@@ -209,8 +200,6 @@ def load(language, gramatiko_transpose_headlines=2):
             'cifre': i,
             'cxene': i_padded
         }
-
-        leciono['tabs'] = build_lesson_tabs(i_padded, enhavo['fasado'], language)
 
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
 
@@ -276,23 +265,21 @@ def load(language, gramatiko_transpose_headlines=2):
         }
         leciono['gramatiko'] = gramatiko
 
-        ekzercoj = {}
+        # If a lessonNN_exercises.yml exists, its unit list is the lesson's
+        # tab list and the single source of all its exercises (see
+        # exercise_builder.py); other lessons fall back to the old layout.
+        exercises_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_exercises.yml'
+        if os.path.exists(exercises_path):
+            if etm_morph is None:
+                etm_morph = lesson_builder.get_etm_analyzer()
+            glosser = exercise_builder.Glosser(slovnik, lambda: etm_morph)
+            units = exercise_builder.build_units(exercises_path, language, glosser)
+        else:
+            units = legacy_units(language, i_padded)
 
-        path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku/' + i_padded + '.yml'
-        ekzercoj['Traduku'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
+        leciono['units'] = units
+        leciono['tabs'] = build_tabs(units, enhavo['fasado'])
 
-        path = 'enhavo/tradukenda/' + language + '/ekzercoj/traduku-kaj-respondu/' + i_padded + '.yml'
-        ekzercoj['Traduku kaj respondu'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
-
-        path = 'enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml'
-        ekzercoj['Kompletigu la frazojn'] = yaml.load(open(path, encoding="utf8"), yaml.Loader)
-
-        if any(tab['id'] == 'elektu' for tab in leciono['tabs']):
-            path = 'enhavo/tradukenda/' + language + '/ekzercoj/elektu/' + i_padded + '.yml'
-            ekzercoj['Elektu la ĝustan opcion'] = load_elektu_exercises(path)
-
-        # Covert from dict to list.
-        leciono['ekzercoj'] = ekzercoj
 
         lecionoj.append(leciono)
 
@@ -374,6 +361,8 @@ def main():
         html_generiloj.generi.generate_html(args.lingvo, enhavo, args)
     if args.eligformo == 'md':
         enhavo = load(args.lingvo, 3)
+        for leciono in enhavo['lecionoj']:
+            leciono['ekzercoj'] = by_type_view(leciono['units'])
         enhavo['lingvoj'] = lingvoj
         enhavo['tekstodirekto'] = lingvoj[args.lingvo].get('tekstodirekto', 'ltr')
         leo_markdown.package.kreu_md(enhavo, printendaj={'partoj': args.printendaj_partoj,

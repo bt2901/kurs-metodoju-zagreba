@@ -1,0 +1,77 @@
+# Lesson 1: its units, in tab order. Compiled by exercise_builder.py.
+#
+# - `grammar`, `text`, `vocab` are the lesson's built-in pages. Any unit
+#   may carry `for: [lang, ...]` to show only for those L1s.
+# - Exercise units need an `id`: it's the page's URL (01/<id>/). `title:`
+#   (optional) overrides the tab caption.
+# - Translations come from slovnik (words are lemmatized with pymorphy2)
+#   unless written out here. The build prints what it auto-filled, and flags
+#   auto-picks that had other senses so a wrong one is easy to spot and
+#   override. Per-L1 data that can't be looked up (prompts, overrides) is a
+#   {lang: value} map.
+units:
+
+- grammar
+- text
+- vocab
+
+- id: pick
+  type: choose               # '+' marks the single correct option; only the L1s listed get the unit
+  items:
+    ru:
+    - question: "как по-русски будет čęsť?"
+      options: [+часть, честь, чясть, челюсть]
+    - question: "как по-русски будет česť?"
+      options: [часть, +честь, чясть, челюсть]
+    - question: "как произносится my jesmo?"
+      options: ["май джесмо", "+мы есмо"]
+    hr:
+    - question: "kako 'kråtȯk' će biti na hrvatskom?"
+      options: [+kratak, krtek, krtica, kratok, krotak]
+    - question: "kako 'člověk' će biti na hrvatskom?"
+      options: [+čovjek, ćovjek, čovijek, človjek]
+    - question: "kako 'ja bijem v bubėn' će biti na hrvatskom?"
+      options: ["+ja udaram u bubanj", "ja jesam u bubanj", "ja udaram u bubnu", "ja jesam v bubenj"]
+
+- id: words
+  type: translate            # ISV word -> type the L1 translation
+  items:
+  - kapučino: {en: cappuccino, ru: капучино, hr: kapučino}        # not in slovnik
+  - kafe
+  - groše
+  - imę
+  - koštovati
+  - pardon:                                                       # not in slovnik
+      en: [excuse me, sorry]
+      ru: [пардон, извините]
+      hr: [oprosti, izvini, ispričavam se, pardon, oprostite]
+
+- id: cloze
+  type: cloze                # [brackets] mark what the learner types
+  items:
+  - "Kaky napoj izbral gospodin Nikola? On izbral k[apuči]no."
+  - "Čaj ne jest kava, no ale jego jest m[ožn]o kupovati v kafe."
+  - "Kako jest v[aš]e imę?"
+  - "[Sendvič] iz črnogo hlěba koštuje [vyše] neželi sendvič iz bělogo hlěba."
+
+- id: answer
+  type: translate-answer     # read the L1 question, type the ISV words that answer it
+  items:                     # `gloss` overrides the per-word hint, keyed by token
+  - isv: Kto bųde piti kakao?
+    prompt:
+      en: Who will drink cocoa?
+      ru: Кто будет пить какао?
+      hr: Tko će piti kakao?
+    gloss:
+      en: {bųde: will, kakao: cocoa}
+      ru: {bųde: будет}
+      hr: {bųde: će}
+  - isv: Kde jest restoran ”běly zajęc”?
+    prompt:
+      en: "Where the ”white hare” restaurant is located?"
+      ru: "Где находится ресторан ”белый заяц”?"
+      hr: 'Gdje se nalazi restoran "bijeli zec"?'
+    gloss:
+      en: {jest: is}
+      ru: {jest: есть}
+      hr: {jest: je, běly: bijeli}

@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+
+{# Frame shared by every exercise page. The pages themselves are
+   ex_<type>.html, one per exercise type, filling in `exercise`. The tab
+   (`tab`), exercise unit (`unit`), its per-lesson number (`ekzerco_index`)
+   and the form id prefix (`form_id`) come from html_generiloj/generi.py. #}
+
+{% block title %}
+	{{leciono_index}}. {{leciono.teksto.titolo_string}}
+	|
+	{{tab.caption}}
+	|
+  {{enhavo.fasado['Esperanto en 12 lecionoj']}}
+{% endblock %}
+
+{% block content %}
+
+  {% include 'pager.html' %}
+
+  <h2 id="leciono{{leciono_index}}">
+    {{leciono_index}}.
+    {% for vorto in leciono.teksto.titolo %}
+      {% include 'vorto.html' %}
+    {% endfor %}
+  </h2>
+
+  {% include 'tabs.html' %}
+
+  {% block exercise %}{% endblock %}
+
+  {% include 'pagxonumerado-komentejo.html' %}
+
+{% endblock %}

@@ -10,8 +10,6 @@ import genanki
 import jinja2
 import mistune
 
-TOTAL_N = 3
-
 
 def join_morphemes(yaml_str):
     return ''.join([list(m.keys())[0] for m in yaml_str])
@@ -226,7 +224,7 @@ def generate_html(lingvo, enhavo, args):
     # book-wide sequence, so prev/next paging can still walk across lesson
     # boundaries even though lessons no longer all share one tab set.
     flat_entries = []
-    for i in range(1, TOTAL_N):
+    for i in range(1, len(enhavo['lecionoj']) + 1):
         for tab in enhavo['lecionoj'][i - 1]['tabs']:
             flat_entries.append((i, tab))
 
@@ -255,6 +253,10 @@ def generate_html(lingvo, enhavo, args):
             next_path=next_path,
             tabs=enhavo['lecionoj'][i - 1]['tabs'],
             active_tab=tab['id'],
+            tab=tab,
+            unit=tab['unit'],
+            ekzerco_index=tab['ekzerco_index'],
+            form_id=str(i) + '-' + str(tab['ekzerco_index']),
             identigilo=i_padded + '/' + tab['href']
         )
 
