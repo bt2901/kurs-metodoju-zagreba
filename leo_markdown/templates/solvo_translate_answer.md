@@ -1,6 +1,6 @@
-#### {{ enhavo.fasado['Traduku kaj respondu'] }}
+#### {{ unit.title or enhavo.fasado['Traduku kaj respondu'] }}
 
-{% for vico in leciono.ekzercoj['Traduku kaj respondu'] %}
+{% for vico in unit['items'] %}
 
 ##### {{ vico.demando }}
 
@@ -8,10 +8,9 @@
 
   {%- if paro is mapping -%}
     {% for esperante, fontlingve in paro.items() %}
-- {{ fontlingve }}: `\hrulefill`{=latex}
+- {{ fontlingve }}: {{ esperante }}
     {% endfor %}
   {% endif %}
-
 {% endfor %}
 
 {% endfor %}

@@ -91,7 +91,7 @@ python generate.py --lingvo en --eligformo md | pandoc -o en.epub
 Limit output to specific parts/lessons (see `--help` for all choices):
 
 ```bash
-python generate.py --lingvo en --eligformo md --printendaj-partoj ekzerco2 solvo2 --printendaj-lecionoj 1 2 3
+python generate.py --lingvo en --eligformo md --printendaj-partoj ekzercoj solvoj --printendaj-unuoj cloze --printendaj-lecionoj 1
 ```
 
 There is no test suite and no linter configured in this repo currently.
@@ -107,7 +107,7 @@ There is no test suite and no linter configured in this repo currently.
 
 `html_generiloj/output/` is entirely build output and is gitignored — except that historically a handful of hand-maintained, language-independent site files (css/js/img/audio, `favicon.ico`, the site's root landing page) lived there anyway, force-added to git despite the ignore rule, because their relative URLs need to resolve under the served output tree. Those files now live in the normally-tracked `html_assets/` at the repo root instead; `generi.py`'s `copy_static_html_assets()` copies them into `html_generiloj/output/` on every HTML build (before the per-language `shutil.rmtree`, which only ever clears `output/<lang>/` and never touches this shared copy). Treat `html_assets/` as source — edit files there, not their copies under `output/`.
 
-Per-lesson tabs in the generated site come from the lesson's unit list (see "Lesson units and exercises"); the Markdown output has fixed parts: text, new words, grammar, three exercise types, each with a `solvoN` (solution) counterpart.
+Per-lesson tabs in the generated site come from the lesson's unit list (see "Lesson units and exercises"). The Markdown output has a fixed book layout (text, new words, grammar, then all exercises, then collected solutions in two columns); the unit list decides which of those a lesson has, and exercises/solutions are rendered per unit, in unit order, by `leo_markdown/templates/ekzerco_<type>.md` / `solvo_<type>.md`. Everything the build reports goes to stderr, because stdout is the Markdown.
 
 ### Lesson-text source pipeline (`lesson_builder.py`)
 
@@ -123,7 +123,7 @@ If `enhavo/netradukenda/tekstoj/lessonNN_exercises.yml` exists, its ordered `uni
 - **Exercise units:** `translate`, `translate-answer`, `cloze` (`[gap]` brackets), `choose` (`+correct`). Each needs an `id`, which is its URL (`NN/<id>/`); optional `title` (string or `{lang: str}`) overrides the tab caption; optional `for: [lang, ...]` restricts a unit to some L1s (a `choose` unit also drops out for any L1 missing from its `items` map). Any number of units of any type per lesson.
 - **Translations** are looked up in `slovnik` (lemma via the etymological `pymorphy2` analyzer, most frequent sense wins) and only need writing out where `slovnik` lacks the word or the contextual form matters (`gloss: {ru: {jest: есть}}` per token, or `{word: {lang: answer}}` for `translate`). The build prints what it auto-filled, flags auto-picks that had other senses, and fails listing every word it can't fill. The L1 sentence in `translate-answer` (`prompt`) is always hand-written.
 - **Rendering:** [generate.py](generate.py)'s `build_tabs()` makes one tab per unit; exercise tabs render `html_generiloj/templates/ex_<type>.html` (extending `ekzerco_base.html`). Numbered types are captioned "Ekzerco N" by position (`choose` uses its label). To add an exercise type: register it in `EXERCISE_TYPES` + a `build_<type>` in `exercise_builder.py`, and add `ex_<type>.html`.
-- The Markdown backend (`leo_markdown`) still expects one exercise per type (`by_type_view()` raises on a duplicate) and its `ekzerco1-3`/`solvo1-3` parts are fixed; it hasn't been moved to the unit list yet.
+- **Markdown selection:** `--printendaj-partoj` takes `teksto vortoj gramatiko ekzercoj solvoj`; `--printendaj-lecionoj` takes lesson numbers; `--printendaj-unuoj` takes exercise unit ids (all by default).
 
 `generate.py` currently hardcodes a debug pickle dump to `C:\dev\kurso-zagreba-metodo\leciono.pkl` inside `load()` — this is a leftover debugging artifact tied to this specific machine path, along with `enhavo.pkl` (written unconditionally at the end of `load()`) and `slovnik.pkl`. These `.pkl` files are build-time debug output, not source content — don't treat them as data to edit or commit.
 

@@ -7,6 +7,8 @@ import glob
 import re
 import os
 import argparse
+import contextlib
+import sys
 import html_generiloj
 import leo_markdown
 import lesson_builder
@@ -85,19 +87,6 @@ def legacy_units(language, i_padded):
     ]
 
 
-def by_type_view(units):
-    """{type label: items} for the Markdown backend, which still expects one
-    exercise per type. Raises if a lesson has several of one type."""
-    view = {}
-    for unit in units:
-        if unit['type'] in exercise_builder.EXERCISE_TYPES:
-            label = exercise_builder.EXERCISE_TYPES[unit['type']]['label']
-            if label in view:
-                raise ValueError("the Markdown backend can't render two %r units in one lesson yet" % unit['type'])
-            view[label] = unit['items']
-    return view
-
-
 def join_morphemes(yaml_str):
     return ''.join([list(m.keys())[0] for m in yaml_str])
 
@@ -137,7 +126,9 @@ def load(language, gramatiko_transpose_headlines=2):
     enhavo = {'lingvo': language, 'vortaro': {}}
 
     from isv_nlp_utils.slovnik import get_slovnik, download_slovnik, prepare_slovnik
-    slovnik = get_slovnik()['words']
+    # get_slovnik() chats on stdout, which is the document in md mode.
+    with contextlib.redirect_stdout(sys.stderr):
+        slovnik = get_slovnik()['words']
     prepare_slovnik(slovnik)
 
     paths = glob.glob('enhavo/tradukenda/' + language + '/vortaro/*.yml')
@@ -296,7 +287,7 @@ def load(language, gramatiko_transpose_headlines=2):
             pos = slovnik.loc[idx]['partOfSpeech']
             enhavo['vortaro'][isv_lemma] = {'tradukajxo': translated_word, 'vortspeco': pos}
         else:
-            print(isv_lemma)
+            print(isv_lemma, file=sys.stderr)
     with open("enhavo.pkl", "wb") as f:
         pickle.dump(enhavo, f)
 
@@ -323,19 +314,24 @@ def get_cmdline_arguments():
     ap.add_argument(
         "-pp",
         "--printendaj-partoj",
-        help="Printendaj partoj",
+        help="Printendaj partoj (nur por md)",
         type=str,
-        choices=['teksto', 'vortoj', 'gramatiko', 'ekzerco1', 'ekzerco2', 'ekzerco3', 'solvo1', 'solvo2', 'solvo3'],
-        default=['teksto', 'vortoj', 'gramatiko', 'ekzerco1', 'ekzerco2', 'ekzerco3', 'solvo1', 'solvo2', 'solvo3'],
+        choices=['teksto', 'vortoj', 'gramatiko', 'ekzercoj', 'solvoj'],
+        default=['teksto', 'vortoj', 'gramatiko', 'ekzercoj', 'solvoj'],
         nargs='*'
     )
     ap.add_argument(
         "-pl",
         "--printendaj-lecionoj",
-        help="Printendaj lecionoj",
+        help="Printendaj lecionoj (numeroj; norme ĉiuj) (nur por md)",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-        default=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        nargs='*'
+    )
+    ap.add_argument(
+        "-pu",
+        "--printendaj-unuoj",
+        help="Printendaj ekzercaj unuoj laŭ identigilo (norme ĉiuj) (nur por md)",
+        type=str,
         nargs='*'
     )
     ap.add_argument(
@@ -361,12 +357,11 @@ def main():
         html_generiloj.generi.generate_html(args.lingvo, enhavo, args)
     if args.eligformo == 'md':
         enhavo = load(args.lingvo, 3)
-        for leciono in enhavo['lecionoj']:
-            leciono['ekzercoj'] = by_type_view(leciono['units'])
         enhavo['lingvoj'] = lingvoj
         enhavo['tekstodirekto'] = lingvoj[args.lingvo].get('tekstodirekto', 'ltr')
         leo_markdown.package.kreu_md(enhavo, printendaj={'partoj': args.printendaj_partoj,
-                                                         'lecionoj': args.printendaj_lecionoj})
+                                                         'lecionoj': args.printendaj_lecionoj,
+                                                         'unuoj': args.printendaj_unuoj})
 
 
 main()

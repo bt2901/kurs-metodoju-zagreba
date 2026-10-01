@@ -1,6 +1,6 @@
-#### {{ enhavo.fasado['Kompletigu la frazojn'] }}
+#### {{ unit.title or enhavo.fasado['Kompletigu la frazojn'] }}
 
-{% for vico in leciono.ekzercoj['Kompletigu la frazojn'] %}
+{% for vico in unit['items'] %}
 
 - {% for parto in vico -%}
 		{% set parto_loop = loop %}
@@ -10,8 +10,11 @@
 					{{valoro}}
 				{%- else %} {% endif -%} 
 			{%- elif klavo == 'solvo' -%}
-		    **{{ valoro }}**
+		    {%- for i in range(valoro|length*2) -%}
+          \_
+	      {%- endfor -%}
 			{%- endif -%} 
 	 {%- endfor %}
 	{% endfor %}
+
 {% endfor %}

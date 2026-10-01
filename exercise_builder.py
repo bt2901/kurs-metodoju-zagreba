@@ -19,6 +19,7 @@ fields), which are the lesson's text, new-words and grammar pages.
 """
 
 import re
+import sys
 
 import yaml
 
@@ -174,9 +175,9 @@ class Report(object):
     def print(self, source_path, language):
         summary = ', '.join('%s: %d auto/%d override' % (unit_id, c['auto'], c['override'])
                             for unit_id, c in self.counts.items())
-        print("[exercises] %s [%s] %s" % (source_path, language, summary))
+        print("[exercises] %s [%s] %s" % (source_path, language, summary), file=sys.stderr)
         for note in self.notes:
-            print("    ? " + note)
+            print("    ? " + note, file=sys.stderr)
 
 
 # ------------------------------------------------------------ unit types --

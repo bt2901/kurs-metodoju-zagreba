@@ -1,39 +1,31 @@
-{% if 'teksto' in printendaj.partoj -%}
+{% if 'teksto' in printendaj.partoj and 'text' in leciono.md_builtin -%}
   {% include 'teksto.md' %}
 {%- endif %}
 
 
-{% if 'vortoj' in printendaj.partoj -%}
+{% if 'vortoj' in printendaj.partoj and 'vocab' in leciono.md_builtin -%}
   {% include 'vortoj.md' %}
 {%- endif %}
 
 
-{% if 'gramatiko' in printendaj.partoj -%}
+{% if 'gramatiko' in printendaj.partoj and 'grammar' in leciono.md_builtin -%}
   {% include 'gramatiko.md' %}
 {%- endif %}
 
 
-{% if 'ekzerco1' in printendaj.partoj or 'ekzerco2' in printendaj.partoj or 'ekzerco3' in printendaj.partoj -%}
+{% if 'ekzercoj' in printendaj.partoj and leciono.md_unuoj -%}
 
 ### {{ enhavo.fasado['Ekzercoj'] }}
 
 
-{% if 'ekzerco1' in printendaj.partoj  -%}
-{% include 'ekzerco1.md' %}
-{%- endif %}
+{% for unit in leciono.md_unuoj %}
+{% include 'ekzerco_' ~ unit.type|replace('-', '_') ~ '.md' %}
 
-{% if 'ekzerco2' in printendaj.partoj  -%}
-{% include 'ekzerco2.md' %}
-{%- endif %}
-
-{% if 'ekzerco3' in printendaj.partoj  -%}
-{% include 'ekzerco3.md' %}
-{%- endif %}
-
+{% endfor %}
 {%- endif %}
 
 
-{% if 'solvo1' in printendaj.partoj or 'solvo2' in printendaj.partoj or 'solvo3' in printendaj.partoj -%}
+{% if 'solvoj' in printendaj.partoj and leciono.md_unuoj -%}
 
 ### {{ enhavo.fasado['Solvoj'] or 'Solvoj' }}
 
@@ -41,20 +33,11 @@
 
 
 
-{% if 'solvo1' in printendaj.partoj -%}
-  {% include 'solvo1.md' %}
-{%- endif %}
+{% for unit in leciono.md_unuoj %}
+{% include 'solvo_' ~ unit.type|replace('-', '_') ~ '.md' %}
 
 
-{% if 'solvo2' in printendaj.partoj -%}
-  {% include 'solvo2.md' %}
-{%- endif %}
-
-
-{% if 'solvo3' in printendaj.partoj -%}
-  {% include 'solvo3.md' %}
-{%- endif %}
-
+{% endfor %}
 
 `\end{multicols}`{=latex}
 
