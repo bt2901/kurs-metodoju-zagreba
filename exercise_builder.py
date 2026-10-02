@@ -23,6 +23,8 @@ import sys
 
 import yaml
 
+import wordsense
+
 # Exercise unit types. `label` is the fasado key naming the type (page
 # heading; also the key of the by-type view the Markdown backend still uses),
 # `numbered` types are captioned "Ekzerco N" in the tab bar, the others use
@@ -91,6 +93,7 @@ class Glosser(object):
         self._slovnik = slovnik
         self._get_morph = get_morph   # called lazily: loading the analyzer is slow
         self._rows = None
+        self.ambiguities = wordsense.Ambiguities()
 
     def _by_lemma(self):
         if self._rows is None:
@@ -100,17 +103,24 @@ class Glosser(object):
                 self._rows.setdefault(row.isv, []).append(row)
         return self._rows
 
-    def lemma(self, word, prefer_exact=False):
+    def lemma(self, word, prefer_exact=False, grammemes=None, where=''):
         """Headword for `word`, or None if slovnik knows neither the word
         itself nor its analyzer lemma. `prefer_exact` is for words that are
-        already lemmas (vocabulary lists)."""
+        already lemmas (vocabulary lists). `grammemes` (from a `{...}`
+        annotation) picks which parse of the word to take; the lemma is then
+        worked out as for lesson texts (wordsense.lemma_of)."""
         rows = self._by_lemma()
-        exact = word.lower().replace('dʒ', 'đ')
+        exact = word.lower().replace('d\u0292', '\u0111')
         if prefer_exact and exact in rows:
             return exact
-        parses = self._get_morph().parse(word)
+        morph = self._get_morph()
+        parses = morph.parse(word)
         if parses:
-            lemma = parses[0].normal_form.replace('dʒ', 'đ').lower()
+            parse = wordsense.choose_parse(word, parses, grammemes, where, self.ambiguities)
+            try:
+                lemma = wordsense.lemma_of(word, parse, morph).lower()
+            except AttributeError:   # lemma_of couldn't inflect to a nominative
+                lemma = parse.normal_form.lower()
             if lemma in rows:
                 return lemma
         return exact if exact in rows else None
@@ -147,10 +157,10 @@ def auto_answers(glosser, word, language):
     return (answers[0] if len(answers) == 1 else answers), _other_senses_note(senses)
 
 
-def auto_hint(glosser, token, language):
+def auto_hint(glosser, token, language, grammemes=None, where=''):
     """(hint, note) for a word token inside a sentence: the lemma's top
-    translation, capitalised like the token."""
-    lemma = glosser.lemma(token)
+    translation, capitalised like the token. `grammemes` picks the parse."""
+    lemma = glosser.lemma(token, grammemes=grammemes, where=where)
     senses = glosser.senses(lemma, language) if lemma else []
     if not senses:
         return None, None
@@ -228,9 +238,14 @@ def parse_cloze_sentence(sentence, where):
     return parts
 
 
-def tokenize_sentence(sentence):
-    """Words and single punctuation marks, in order."""
-    return _TOKEN_RE.findall(sentence)
+def tokenize_sentence(sentence, where='sentence'):
+    """Words and single punctuation marks, in order, as [(token, grammemes)]
+    where `grammemes` comes from a `{...}` annotation right after the word
+    (see wordsense.py) or is None."""
+    clean, notes = wordsense.strip_annotations(sentence, where)
+    tokens = [(m.group(), notes.pop(m.end(), None)) for m in _TOKEN_RE.finditer(clean)]
+    wordsense.check_all_attached(notes, where)
+    return tokens
 
 
 def build_translate(unit, language, where, glosser, report):
@@ -280,20 +295,23 @@ def build_translate_answer(unit, language, where, glosser, report):
         if prompt is None:
             raise ValueError("%s: no prompt for %r" % (here, language))
         overrides = (item.get('gloss') or {}).get(language) or {}
-        tokens = tokenize_sentence(isv)
-        unknown = set(overrides) - set(tokens)
+        tokens = tokenize_sentence(isv, here)
+        unknown = set(overrides) - set(t for t, _ in tokens)
         if unknown:
             raise ValueError("%s: gloss override for %s names words not in the sentence: %s"
                              % (here, language, ', '.join(sorted(unknown))))
         pairs = []
-        for token in tokens:
+        for token, grammemes in tokens:
             if not re.match(r'\w', token):
+                if grammemes is not None:
+                    raise ValueError("%s: {%s} follows %r, which isn't a word"
+                                     % (here, ' '.join(sorted(grammemes)), token))
                 pairs.append(token)
             elif token in overrides:
                 pairs.append({token: overrides[token]})
                 report.count(unit_id, 'override')
             else:
-                hint, note = auto_hint(glosser, token, language)
+                hint, note = auto_hint(glosser, token, language, grammemes, here)
                 if hint is None:
                     report.missing.append(
                         "%s: no %s gloss for %r in slovnik; write `gloss: {%s: {%s: ...}}`"
@@ -382,5 +400,6 @@ def build_units(source_path, language, glosser):
         })
     if report.missing:
         raise ValueError('\n'.join(report.missing))
+    glosser.ambiguities.print(source_path)
     report.print(source_path, language)
     return units

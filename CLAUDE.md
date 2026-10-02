@@ -115,6 +115,16 @@ For each lesson `NN`, if `enhavo/netradukenda/tekstoj/lessonNN_source.md` exists
 
 This replaces the manual workflow that used to live in `maintenance/uczebnik.ipynb` (write ISV prose in a notebook cell → run the tokenize/analyze cells → copy the printed YAML by hand into the `.yml` file → separately re-run an asset-inlining cell against the built HTML for lesson 1). The notebook's asset-inlining step (rewriting `<link>`/`<script src>` tags in `html_generiloj/output/en/01/**/*.html` into inline `<style>`/`<script>`) is **not** covered by `lesson_builder.py` and still needs to be run manually from the notebook if that self-contained-HTML behavior is still wanted. The purpose of asset-inlining step is making html self-contained, so it could be easily shared with people (the hosting of artifacts on the GH Pages is on the roadmap for the future development).
 
+#### Choosing the right parse of a word (`wordsense.py`)
+
+The analyzer returns every parse of a form (`mylo` = noun, or past tense of `myti`; `vidi` = 3per or imperative; `dobrogo` = acc or gen) and `parses[0]` is an arbitrary pick, so an occurrence can be disambiguated inline with grammemes in braces right after the word, in `lessonNN_source.md` and in `isv:` sentences of `translate-answer` units:
+
+```
+Žena vidi{3per} dobrogo{masc accs} mųža{accs}.      (attached or spaced: `vidi {3per}` also works)
+```
+
+An annotation keeps the first parse whose tag contains all the listed grammemes (case-insensitive; POS names like `verb`/`noun` work because matching uses `tag.grammemes`, not `tag.POS`). No match fails the build and lists the available parses; an annotation that doesn't directly follow a word is an error. Braces are stripped before tokenizing and never reach the output. Unannotated words whose parses differ in lemma/POS are listed on stderr (`[ambiguous] …`); case/number-only ambiguity is deliberately not reported. **Known upstream bug:** the ISV pymorphy2 dictionaries report `tag.POS == None` for everything; `wordsense.analysis_key` compares `(POS, normal_form)` so it sharpens by itself once that is fixed. The lemma fix-ups (forced nominative etc.) live in `wordsense.lemma_of`, shared by texts and exercise hints.
+
 ### Lesson units and exercises (`exercise_builder.py`)
 
 If `enhavo/netradukenda/tekstoj/lessonNN_exercises.yml` exists, its ordered `units` list **is the lesson's tab list** and the single source of all its exercises (currently lesson 1; lesson 2 still goes through `legacy_units()` in [generate.py](generate.py), which wraps the old per-type/per-language files under `enhavo/tradukenda/<lang>/ekzercoj/` and `enhavo/netradukenda/ekzercoj/` — Esperanto-era placeholders — and can be deleted once lesson 2 has its own file).

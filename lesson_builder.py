@@ -24,6 +24,8 @@ from collections import Counter
 from razdel import tokenize
 from isv_nlp_utils import constants
 
+import wordsense
+
 DEFAULT_DICT_PATH = os.environ.get('ISV_DICT_PATH', 'C:\\dev\\ISV_pymorphy2_dicts\\pymorphy2-dicts\\')
 
 _TITLE_RE = re.compile(r'^#\s*(.+?)\s*\n+', re.UNICODE)
@@ -94,54 +96,26 @@ not_found = {'člověka', 'ljubogo', 'tvojego', 'sebę', 'nekulturnogo', 'den', 
 
 not_found = {'kostovati', 'ziťje', 'kapučiny', 'nekulturny', 'nikola', 'sendvič', 'imama', 'borodina', 'vědati', 'y', 'den', 'necivilizovany', 'veś', 'toj', 'imati', 'vladimir', 'hlopec', 'otec', 'kako'}
 
-def _parse_token(word, morph, isv_dict):
+def _parse_token(word, morph, isv_dict, grammemes=None, where='', ambiguities=None):
     """Return a {'lemma': ..., 'morfemes': {stem: 'stem', suffix: tags}}
-    dict for a recognised word, or None if the analyzer doesn't know it."""
+    dict for a recognised word, or None if the analyzer doesn't know it.
+
+    `grammemes` (from a `{...}` annotation in the source) picks which of the
+    word's parses to use; without it the first parse is used and
+    lemma/part-of-speech ambiguity is recorded in `ambiguities`."""
     if not word.isalpha():
         return None
     parses = morph.parse(word)
     if not parses:
         return None
 
-    word_parse = parses[0]
+    word_parse = wordsense.choose_parse(word, parses, grammemes, where, ambiguities)
     _, stem, suffix = extract_stem_suffix(word, word_parse, isv_dict)
     morfemes = {stem: 'stem', suffix: str(word_parse.tag).replace(',', ' ')}
     morfemes.pop('', None)
-    # dirty fix: manually force word to be in a nominative
-    # for some reason it tends to not work with ISV pymorphy2 dictionaries
-    lemma = word_parse.normal_form
-    lemma_tags = morph.parse(lemma)[0].tag
-    if any(pos in lemma_tags.grammemes for pos in ['adj', 'noun', 'pron']):
-        # dirty fix: manually select a 'correct' parse >_>
-        if word.lower() == "jedno":
-            lemma = 'jedin'
-        elif word.lower() == "sę":
-            lemma = 'sę'
-        elif word.lower() == "ljudi":
-            lemma = 'ljudi'
-        #elif word.lower() == "začto":  #TODO: no adverbs in pymorphy for now...
-        #    lemma = 'začto'
-        elif word.lower() in ["ja", "mně"]:
-            lemma = 'ja'
-        elif "nom" not in lemma_tags.grammemes and "indecl" not in lemma_tags.grammemes:
-            target = {"nom"}
-            if "int" in lemma_tags.grammemes:
-                target = {"nom"}
-            if "prs" in lemma_tags.grammemes:
-                target = {"nom", "sing"}
-            if "adj" in lemma_tags.grammemes:
-                target = {"nom", "sing", "masc"}
-            if "noun" in lemma_tags.grammemes:
-                target = {"nom", "sing"}
-            tmp = word_parse.inflect(target)
-            if tmp is None:  # print debug info before crashing
-                print(word)
-                print([lemma, lemma_tags])
-                print(word_parse)
-            lemma = tmp.word
-    lemma = lemma.replace('d\u0292', '\u0111')  # dʒ -> đ
+    lemma = wordsense.lemma_of(word, word_parse, morph)
     if lemma in not_found:
-        print(parses[0], file=sys.stderr)
+        print(word_parse, file=sys.stderr)
 
     return {
         'lemma': lemma,
@@ -149,16 +123,24 @@ def _parse_token(word, morph, isv_dict):
     }
 
 
-def tokenize_to_paragraphs(text, morph, isv_dict):
+def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None):
     """Tokenize `text`, analyze every recognisable ISV word, and group the
     result into paragraphs (one per line break in the source), matching the
-    shape of enhavo/netradukenda/tekstoj/NN.yml's `titolo`/`paragrafoj`."""
+    shape of enhavo/netradukenda/tekstoj/NN.yml's `titolo`/`paragrafoj`.
+
+    `{grammemes}` annotations after words (see wordsense.py) are stripped
+    first and steer which parse each annotated word gets."""
+    text, notes = wordsense.strip_annotations(text, where)
     tokens = list(tokenize(text))
     whitespace = _whitespace_after_tokens(text, tokens)
 
     paragraphs = [[]]
     for token, token_whitespace in zip(tokens, whitespace):
-        parsed = _parse_token(token.text, morph, isv_dict)
+        grammemes = notes.pop(token.stop, None)
+        parsed = _parse_token(token.text, morph, isv_dict, grammemes, where, ambiguities)
+        if grammemes is not None and parsed is None:
+            raise ValueError("%s: {%s} follows %r, which isn't a word the analyzer knows"
+                             % (where, ' '.join(sorted(grammemes)), token.text))
         if parsed is not None:
             morfemes = [{k: v} for k, v in parsed['morfemes'].items()]
             paragraphs[-1].append({'token': {'lemma': parsed['lemma'], 'morfemes': morfemes}})
@@ -173,6 +155,7 @@ def tokenize_to_paragraphs(text, morph, isv_dict):
             # falsy paragraph entry as "render a single space here".
             paragraphs[-1].append(None)
 
+    wordsense.check_all_attached(notes, where)
     return [p for p in paragraphs if p]
 
 
@@ -193,8 +176,10 @@ def build_teksto(source_md_path, dict_path=None, morph=None):
         morph = get_etm_analyzer(dict_path)
     isv_dict = morph._units[0][0].dict
 
-    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict)
-    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict)
+    ambiguities = wordsense.Ambiguities()
+    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict, source_md_path, ambiguities)
+    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict, source_md_path, ambiguities)
+    ambiguities.print(source_md_path)
 
     titolo = titolo_paragraphs[0] if titolo_paragraphs else []
 
