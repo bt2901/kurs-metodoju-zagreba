@@ -374,8 +374,7 @@ def build_cloze(unit, language, where, glosser, report):
 
 
 def build_choose(unit, language, where, glosser, report):
-    raw = _l1(unit['items'], language, where + ' items')
-    return parse_choice_items(raw, where)
+    return parse_choice_items(unit['items'], where)
 
 
 BUILDERS = {
@@ -397,8 +396,10 @@ def build_units(source_path, language, glosser):
     letters/digits/dashes, becomes the page's URL), `items` (shape depends on
     type; translations come from slovnik unless an item overrides them),
     optional `title` (tab caption; a string or {lang: string}), optional
-    `for: [lang...]` to restrict the unit to some L1s. A `choose` unit is
-    skipped for an L1 whose key is missing from its `items` map.
+    `for: [lang...]` to restrict the unit to some L1s. For any exercise type,
+    `items` may instead be a `{lang: [items]}` map when the exercise differs
+    per L1 (different sentences, different questions); the unit is then
+    skipped for an L1 that has no entry.
 
     Prints a short report of what was auto-filled, and raises (listing every
     problem at once) if some translation can neither be found nor overridden.
@@ -431,8 +432,11 @@ def build_units(source_path, language, glosser):
         if unit_id in seen_ids:
             raise ValueError("%s: duplicate or reserved id %r" % (where, unit_id))
         seen_ids.add(unit_id)
-        if unit_type == 'choose' and language not in unit['items']:
-            continue
+        items = unit.get('items')
+        if isinstance(items, dict):   # per-L1 items
+            if language not in items:
+                continue
+            unit = dict(unit, items=items[language])
         title = unit.get('title')
         if isinstance(title, dict):
             title = title.get(language)

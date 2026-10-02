@@ -153,9 +153,13 @@ def structure_spec(n, languages):
             out.append(Problem(ERROR, n, None, "%s: unknown type %r" % (label, unit.get('type'))))
             continue
         mentioned = set(unit.get('for') or [])
-        if unit.get('type') == 'choose' and isinstance(unit.get('items'), dict):
-            mentioned |= set(unit['items'])
-        for item in (unit.get('items') or []) if isinstance(unit.get('items'), list) else []:
+        items = unit.get('items')
+        if isinstance(items, dict):   # per-L1 items: {lang: [items]}
+            mentioned |= set(items)
+            lists = [i for i in items.values() if isinstance(i, list)]
+        else:
+            lists = [items] if isinstance(items, list) else []
+        for item in (item for items_list in lists for item in items_list):
             if isinstance(item, dict) and isinstance(item.get('prompt'), dict):
                 mentioned |= set(item['prompt'])
         unknown = sorted(c for c in mentioned if c not in known)
@@ -174,7 +178,7 @@ def effective_units(spec, lang):
             continue
         if unit.get('type') in exercise_builder.BUILTIN_UNITS:
             builtin.append(unit['type'])
-        elif unit.get('type') == 'choose' and lang not in (unit.get('items') or {}):
+        elif isinstance(unit.get('items'), dict) and lang not in unit['items']:
             continue
         elif unit.get('type') in exercise_builder.EXERCISE_TYPES:
             exercises.append(unit)

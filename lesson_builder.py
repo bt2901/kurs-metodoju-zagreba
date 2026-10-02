@@ -69,7 +69,11 @@ def extract_stem_suffix(word, word_parse, isv_dict, postprocess_freq_thres=0.9):
     for pref_len in range(1, 5):
         freq = Counter([suf[:pref_len] for (_, _, suf) in paradigm])
         most_common_pref, its_freq = freq.most_common(1)[0]
-        if its_freq / len(paradigm) >= postprocess_freq_thres:
+        # Move the shared first letter(s) of the endings into the stem -- but only
+        # if this form's ending really starts with them: for a fleeting-e form
+        # like `otėc` (ending `ėc`, while most endings are `ca ci cu ...`) cutting
+        # a character off the ending anyway turns `ot|ėc` into `otc|c`.
+        if its_freq / len(paradigm) >= postprocess_freq_thres and suff.startswith(most_common_pref):
             fixed_stem = stem + most_common_pref
             fixed_suf = suff[pref_len:]
 
@@ -79,6 +83,19 @@ def extract_stem_suffix(word, word_parse, isv_dict, postprocess_freq_thres=0.9):
         # come out with a correctly-cased stem but a lowercase tail.
         fixed_stem = fixed_stem.upper()
         fixed_suf = fixed_suf.upper()
+
+    # The parts are joined back into the displayed word, so they must spell it
+    # as the author wrote it. They can differ when the dictionary's ending is
+    # spelled another way (`sědžų` vs its ending `ʒų`) or when a guessed parse
+    # for a form the dictionary lacks is wrong. Keep the analyzer's stem if the
+    # word really starts with it and take the ending from the word itself;
+    # otherwise show the word unsplit rather than a different spelling.
+    if (pref + fixed_stem + fixed_suf).lower() != word.lower():
+        if not pref and word.lower().startswith(fixed_stem.lower()):
+            return pref, word[:len(fixed_stem)], word[len(fixed_stem):]
+        print("[split] %r: the analyzer's split %s|%s doesn't spell the word; showing it unsplit"
+              % (word, fixed_stem, fixed_suf), file=sys.stderr)
+        return '', word, ''
 
     return pref, fixed_stem, fixed_suf
 

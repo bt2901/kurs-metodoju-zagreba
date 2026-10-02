@@ -5,7 +5,37 @@
 # tradukenda/<lang>/gramatiko/02.md holds ISV grammar notes for it, and
 # exercise units (`- id: ...` / `type: ...`) when there is something to
 # practise; add word overrides under `glosses:`.
+glosses:
+  ziťju:                     # is it in slovnik? it's complicated
+    lemma: žiti
+  imamo:                  # dirty spot-fix
+    lemma: imati
+  pardon:                    # not in slovnik
+    gloss:
+      en: [excuse me, sorry]
+      ru: [пардон, извините]
+      hr: [oprosti, izvini, ispričavam se, pardon, oprostite]
+  vladimir:
+    lemma: vladimir
+    gloss: male name
+    scope: local
+  borodin:
+    lemma: borodin
+    gloss: male name
+    scope: local
+
 units:
 
+- grammar
 - text
 - vocab
+
+- id: cloze
+  type: cloze                # [brackets] mark what the learner types
+  items:
+    ru:
+      - "Nam [sųt] potrěbn[i] programist[i]"
+      - "Sponsor našego projekta [jest] Nikola"
+      - "Sponsorom Nikoly Tesly [byl] Robert Džonson"
+    hr:
+      - "Nikola Tesla imal kontakt[y] sȯ něktor[ymi] sponsor[ami]."
