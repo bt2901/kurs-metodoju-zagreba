@@ -8,6 +8,7 @@
     {% set klavo = vorto.token.lemma %}
     {{klavo}}
   " data-content="
+    {% set klavo = vorto.token.gloss_key or vorto.token.lemma %}
     {% include 'tradukajxo.html' %}
     <table>
     {% if vorto.token.morfemes|length > 0 -%} 

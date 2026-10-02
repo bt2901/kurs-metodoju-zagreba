@@ -13,12 +13,13 @@ import html_generiloj
 import leo_markdown
 import lesson_builder
 import exercise_builder
+import glosses
 
 TOTAL_N = 3
 import pickle
 
 # A lesson's units (see exercise_builder.py) are its tabs, in order. Lessons
-# without a lessonNN_exercises.yml (see legacy_units) get this default set.
+# without a lessonNN_structure.yml (see legacy_units) get this default set.
 DEFAULT_UNITS = [{'id': BUILTIN['id'], 'type': unit_type}
                  for unit_type, BUILTIN in exercise_builder.BUILTIN_UNITS.items()]
 
@@ -71,7 +72,7 @@ def build_tabs(units, fasado):
 
 
 def legacy_units(language, i_padded):
-    """Units for a lesson that has no lessonNN_exercises.yml: the built-in
+    """Units for a lesson that has no lessonNN_structure.yml: the built-in
     tabs plus the old per-type, per-language exercise files (already in
     compiled form). Kept only until every lesson has an exercises file."""
     def load_yml(path):
@@ -192,6 +193,12 @@ def load(language, gramatiko_transpose_headlines=2):
             'cxene': i_padded
         }
 
+        # Word overrides (glosses.py): course-wide plus the lesson's own
+        # `glosses:`, shared by the text build, the vocabulary and the exercises.
+        structure_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_structure.yml'
+        overrides = glosses.load_overrides(structure_path)
+        leciono['overrides'] = overrides
+
         path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
 
         # If a plaintext-ish Markdown source exists for this lesson, it's the
@@ -204,7 +211,7 @@ def load(language, gramatiko_transpose_headlines=2):
         if os.path.exists(source_md_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
-            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph)
+            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph, overrides=overrides)
             with open(path, 'w', encoding='utf8') as f:
                 yaml.dump(teksto, f, allow_unicode=True, default_flow_style=False)
 
@@ -239,6 +246,9 @@ def load(language, gramatiko_transpose_headlines=2):
                     continue
                 vorto = vorto['token']
                 if type(vorto) is dict:
+                    entry = overrides.get(vorto.get('gloss_key'))
+                    if entry is not None and entry['scope'] == 'local':
+                        continue
                     radiko = vorto['lemma'].replace("dʒ", "đ")
                     if not radiko.lower() in vortoj:
                         leciono['vortoj']['teksto'].append(radiko)
@@ -256,15 +266,14 @@ def load(language, gramatiko_transpose_headlines=2):
         }
         leciono['gramatiko'] = gramatiko
 
-        # If a lessonNN_exercises.yml exists, its unit list is the lesson's
+        # If a lessonNN_structure.yml exists, its unit list is the lesson's
         # tab list and the single source of all its exercises (see
         # exercise_builder.py); other lessons fall back to the old layout.
-        exercises_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_exercises.yml'
-        if os.path.exists(exercises_path):
+        if os.path.exists(structure_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
-            glosser = exercise_builder.Glosser(slovnik, lambda: etm_morph)
-            units = exercise_builder.build_units(exercises_path, language, glosser)
+            glosser = exercise_builder.Glosser(slovnik, lambda: etm_morph, overrides, enhavo['fasado'])
+            units = exercise_builder.build_units(structure_path, language, glosser)
         else:
             units = legacy_units(language, i_padded)
 
@@ -275,9 +284,36 @@ def load(language, gramatiko_transpose_headlines=2):
         lecionoj.append(leciono)
 
     enhavo['lecionoj'] = lecionoj
+
+    # Resolve each lesson's word overrides for this language: `glosoj` feeds
+    # the text popovers (keyed by the token's gloss_key); course-scope ones
+    # also become dictionary entries for the new-words list.
+    untranslated = set()
+    course_glosses = {}
+    for leciono in lecionoj:
+        glosoj = {}
+        for paragraph in [leciono['teksto']['titolo']] + leciono['teksto']['paragrafoj']:
+            for item in paragraph:
+                token = item['token'] if item else None
+                if not isinstance(token, dict) or 'gloss_key' not in token:
+                    continue
+                entry = leciono['overrides'][token['gloss_key']]
+                gloss = glosses.text(entry.get('gloss'), language, enhavo['fasado'], untranslated)
+                if gloss is None:
+                    continue
+                glosoj[token['gloss_key']] = gloss
+                if entry['scope'] == 'course':
+                    course_glosses[token['lemma'].replace("dʒ", "đ")] = gloss
+        leciono['glosoj'] = glosoj
+    for string, lang in sorted(untranslated):
+        print("[glosses] no %r translation of the interface gloss %r (add it to "
+              "enhavo/tradukenda/%s/fasado/glosoj.yml); using the English text" % (lang, string, lang),
+              file=sys.stderr)
+
     all_words = set()
     for leciono in enhavo['lecionoj']:
         all_words |= set(leciono['vortoj']['teksto'])
+    all_words -= set(course_glosses)
 
     not_found = set()
     for isv_lemma in all_words:
@@ -291,6 +327,8 @@ def load(language, gramatiko_transpose_headlines=2):
             print(isv_lemma, file=sys.stderr)
             not_found.add(isv_lemma)
     print(not_found, file=sys.stderr)
+    for lemma, gloss in course_glosses.items():
+        enhavo['vortaro'][lemma] = {'tradukajxo': gloss, 'vortspeco': ''}
     with open("enhavo.pkl", "wb") as f:
         pickle.dump(enhavo, f)
 

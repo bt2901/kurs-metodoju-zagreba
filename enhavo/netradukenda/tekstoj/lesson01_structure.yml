@@ -1,14 +1,39 @@
-# Lesson 1: its units, in tab order. Compiled by exercise_builder.py.
+# Lesson 1: what the lesson consists of. Read by generate.py, exercise_builder.py,
+# lesson_builder.py (word overrides) and glosses.py.
 #
-# - `grammar`, `text`, `vocab` are the lesson's built-in pages. Any unit
-#   may carry `for: [lang, ...]` to show only for those L1s.
+# `glosses:` -- word overrides for this lesson's texts AND exercises (see
+#   glosses.py). Keyed by a word as written (any form) or a lemma. Fields:
+#   gloss (popover/hint), answer (what `translate` expects typed), lemma,
+#   morphemes, scope (`local` = keep out of the new-words list). A bare-string
+#   gloss is an interface string, translated in fasado/glosoj.yml; a map is
+#   {lang: text | [texts]}. Course-wide ones go in netradukenda/glosoj.yml.
+#
+# `units:` -- the lesson's pages, in tab order.
+# - `grammar`, `text`, `vocab` are the built-in pages. Any unit may carry
+#   `for: [lang, ...]` to show only for those L1s.
 # - Exercise units need an `id`: it's the page's URL (01/<id>/). `title:`
 #   (optional) overrides the tab caption.
 # - Translations come from slovnik (words are lemmatized with pymorphy2)
-#   unless written out here. The build prints what it auto-filled, and flags
-#   auto-picks that had other senses so a wrong one is easy to spot and
-#   override. Per-L1 data that can't be looked up (prompts, overrides) is a
-#   {lang: value} map.
+#   unless a gloss or the item says otherwise. The build prints what it
+#   auto-filled, and flags auto-picks that had other senses so a wrong one is
+#   easy to spot and override. Per-L1 data that can't be looked up (prompts,
+#   overrides) is a {lang: value} map.
+# - `{grammemes}` after a word in an `isv:` sentence or in lesson01_source.md
+#   picks one of its parses (see wordsense.py).
+glosses:
+  kapučino:                  # not in slovnik; the analyzer reads it as an adjective
+    lemma: kapučino
+    gloss: {en: cappuccino, ru: капучино, hr: kapučino}
+  pardon:                    # not in slovnik
+    gloss:
+      en: [excuse me, sorry]
+      ru: [пардон, извините]
+      hr: [oprosti, izvini, ispričavam se, pardon, oprostite]
+  nikola:
+    lemma: nikola            # the analyzer says `nikol` (genitive)
+    gloss: male name         # interface string: see fasado/glosoj.yml
+    scope: local             # not vocabulary: popover only
+
 units:
 
 - grammar
@@ -36,15 +61,12 @@ units:
 - id: words
   type: translate            # ISV word -> type the L1 translation
   items:
-  - kapučino: {en: cappuccino, ru: капучино, hr: kapučino}        # not in slovnik
+  - kapučino
   - kafe
   - groše
   - imę
   - koštovati
-  - pardon:                                                       # not in slovnik
-      en: [excuse me, sorry]
-      ru: [пардон, извините]
-      hr: [oprosti, izvini, ispričavam se, pardon, oprostite]
+  - pardon
 
 - id: cloze
   type: cloze                # [brackets] mark what the learner types

@@ -1,5 +1,8 @@
 {%- if klavo -%} 
-  {%- if klavo in enhavo.vortaro -%} 
+  {#- a word override (glosses.py) for this lesson wins over the shared dictionary -#}
+  {%- if leciono is defined and leciono.glosoj and klavo in leciono.glosoj -%}
+    {%- set tradukajxo = leciono.glosoj[klavo] -%}
+  {%- elif klavo in enhavo.vortaro -%}
     {%- set tradukajxo = enhavo.vortaro[klavo]['tradukajxo'] -%}
   {%- else -%}
 	{%- set tradukajxo = "PANIKA! " + klavo -%}

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Build a lesson's exercise data from a single per-lesson source file.
 
-`enhavo/netradukenda/tekstoj/lessonNN_exercises.yml` replaces the pile of
+`enhavo/netradukenda/tekstoj/lessonNN_structure.yml` replaces the pile of
 per-type, per-language files that used to hold a lesson's exercises
 (`tradukenda/<lang>/ekzercoj/<type>/NN.yml` plus
 `netradukenda/ekzercoj/kompletigu-la-frazojn/NN.yml`). It is an ordered list
@@ -23,6 +23,7 @@ import sys
 
 import yaml
 
+import glosses
 import wordsense
 
 # Exercise unit types. `label` is the fasado key naming the type (page
@@ -89,11 +90,14 @@ class Glosser(object):
     mentions the others so a wrong pick is easy to spot and override.
     """
 
-    def __init__(self, slovnik, get_morph):
+    def __init__(self, slovnik, get_morph, overrides=None, fasado=None):
         self._slovnik = slovnik
         self._get_morph = get_morph   # called lazily: loading the analyzer is slow
         self._rows = None
         self.ambiguities = wordsense.Ambiguities()
+        self.overrides = overrides or {}    # glosses.py entries for this lesson
+        self.fasado = fasado or {}          # UI strings, for interface-string glosses
+        self.untranslated = set()           # {(interface string, language)}
 
     def _by_lemma(self):
         if self._rows is None:
@@ -103,26 +107,49 @@ class Glosser(object):
                 self._rows.setdefault(row.isv, []).append(row)
         return self._rows
 
+    def analyze(self, word, grammemes=None, where='', note_ambiguity=True):
+        """The analyzer's lemma for this occurrence of `word` (lowercase), or
+        None if it has no parse. `grammemes` (from a `{...}` annotation)
+        picks the parse; the lemma is then worked out as for lesson texts
+        (wordsense.lemma_of)."""
+        morph = self._get_morph()
+        parses = morph.parse(word)
+        if not parses:
+            return None
+        parse = wordsense.choose_parse(word, parses, grammemes, where,
+                                       self.ambiguities if note_ambiguity else None)
+        try:
+            return wordsense.lemma_of(word, parse, morph).lower()
+        except AttributeError:   # lemma_of couldn't inflect to a nominative
+            return parse.normal_form.lower()
+
+    def override(self, word, lemma=None):
+        """The glosses.py entry for `word` (by its form, else its lemma)."""
+        return glosses.lookup(self.overrides, word, lemma)[1]
+
+    def entry_text(self, entry, field, language):
+        """An entry's `gloss`/`answer` for `language`; `answer` falls back to
+        `gloss`. None if the entry says nothing for this language."""
+        raw = entry.get(field)
+        if raw is None and field == 'answer':
+            raw = entry.get('gloss')
+        return glosses.text(raw, language, self.fasado, self.untranslated)
+
     def lemma(self, word, prefer_exact=False, grammemes=None, where=''):
         """Headword for `word`, or None if slovnik knows neither the word
         itself nor its analyzer lemma. `prefer_exact` is for words that are
-        already lemmas (vocabulary lists). `grammemes` (from a `{...}`
-        annotation) picks which parse of the word to take; the lemma is then
-        worked out as for lesson texts (wordsense.lemma_of)."""
+        already lemmas (vocabulary lists). A glosses.py `lemma` wins over the
+        analyzer's."""
         rows = self._by_lemma()
         exact = word.lower().replace('d\u0292', '\u0111')
         if prefer_exact and exact in rows:
             return exact
-        morph = self._get_morph()
-        parses = morph.parse(word)
-        if parses:
-            parse = wordsense.choose_parse(word, parses, grammemes, where, self.ambiguities)
-            try:
-                lemma = wordsense.lemma_of(word, parse, morph).lower()
-            except AttributeError:   # lemma_of couldn't inflect to a nominative
-                lemma = parse.normal_form.lower()
-            if lemma in rows:
-                return lemma
+        lemma = self.analyze(word, grammemes, where)
+        entry = self.override(word, lemma)
+        if entry is not None and entry.get('lemma'):
+            lemma = entry['lemma'].lower()
+        if lemma in rows:
+            return lemma
         return exact if exact in rows else None
 
     def senses(self, lemma, language):
@@ -142,32 +169,47 @@ def _other_senses_note(senses):
 
 
 def auto_answers(glosser, word, language):
-    """(answers, note) for typing `word`'s translation; answers is None if
-    slovnik has nothing for this word/L1. A single answer is returned as a
-    string, several as a list (the shape the templates expect). English verbs
-    are accepted both as 'to X' and as 'X'."""
+    """(answers, note, source) for typing `word`'s translation; answers is
+    None if neither a glosses.py entry nor slovnik has anything for this
+    word/L1. A single answer is a string, several a list (the shape the
+    templates expect). From slovnik, English verbs are accepted both as
+    'to X' and as 'X'. `source` is 'glosses' or 'slovnik'."""
+    entry = glosser.override(word)
+    if entry is None:
+        entry = glosser.override(word, glosser.analyze(word, note_ambiguity=False))
+    if entry is not None:
+        text = glosser.entry_text(entry, 'answer', language)
+        if text is not None:
+            return text, None, 'glosses'
     lemma = glosser.lemma(word, prefer_exact=True)
     senses = glosser.senses(lemma, language) if lemma else []
     if not senses:
-        return None, None
+        return None, None, None
     pos, answers = senses[0]
     if language == 'en' and pos.startswith('v.'):
         bare = [a[3:] if a.startswith('to ') else a for a in answers]
         answers = list(dict.fromkeys(['to ' + a for a in bare] + bare))
-    return (answers[0] if len(answers) == 1 else answers), _other_senses_note(senses)
+    return (answers[0] if len(answers) == 1 else answers), _other_senses_note(senses), 'slovnik'
 
 
 def auto_hint(glosser, token, language, grammemes=None, where=''):
-    """(hint, note) for a word token inside a sentence: the lemma's top
-    translation, capitalised like the token. `grammemes` picks the parse."""
+    """(hint, note, source) for a word token inside a sentence: a glosses.py
+    gloss as written, else the lemma's top slovnik translation capitalised
+    like the token. `grammemes` picks the parse."""
+    analysis = glosser.analyze(token, grammemes, where)
+    entry = glosser.override(token, analysis)
+    if entry is not None:
+        text = glosser.entry_text(entry, 'gloss', language)
+        if text is not None:
+            return (text if isinstance(text, str) else ', '.join(text)), None, 'glosses'
     lemma = glosser.lemma(token, grammemes=grammemes, where=where)
     senses = glosser.senses(lemma, language) if lemma else []
     if not senses:
-        return None, None
+        return None, None, None
     hint = senses[0][1][0]
     if token[:1].isupper():
         hint = hint[:1].upper() + hint[1:]
-    return hint, _other_senses_note(senses)
+    return hint, _other_senses_note(senses), 'slovnik'
 
 
 class Report(object):
@@ -180,10 +222,11 @@ class Report(object):
         self.missing = []
 
     def count(self, unit_id, kind):
-        self.counts.setdefault(unit_id, {'auto': 0, 'override': 0})[kind] += 1
+        self.counts.setdefault(unit_id, {'auto': 0, 'override': 0, 'glosses': 0})[kind] += 1
 
     def print(self, source_path, language):
-        summary = ', '.join('%s: %d auto/%d override' % (unit_id, c['auto'], c['override'])
+        summary = ', '.join('%s: %d auto/%d glosses/%d override'
+                            % (unit_id, c['auto'], c['glosses'], c['override'])
                             for unit_id, c in self.counts.items())
         print("[exercises] %s [%s] %s" % (source_path, language, summary), file=sys.stderr)
         for note in self.notes:
@@ -265,13 +308,13 @@ def build_translate(unit, language, where, glosser, report):
             answer = overrides[language]
             report.count(unit_id, 'override')
         else:
-            answer, note = auto_answers(glosser, isv, language)
+            answer, note, source = auto_answers(glosser, isv, language)
             if answer is None:
                 report.missing.append(
                     "%s: no %s translation for %r in slovnik; write `- %s: {%s: ...}`"
                     % (where, language, isv, isv, language))
                 continue
-            report.count(unit_id, 'auto')
+            report.count(unit_id, 'glosses' if source == 'glosses' else 'auto')
             if note:
                 shown = answer if isinstance(answer, str) else ' | '.join(answer)
                 report.notes.append("%s -> %s  (%s)" % (isv, shown, note))
@@ -311,14 +354,14 @@ def build_translate_answer(unit, language, where, glosser, report):
                 pairs.append({token: overrides[token]})
                 report.count(unit_id, 'override')
             else:
-                hint, note = auto_hint(glosser, token, language, grammemes, here)
+                hint, note, source = auto_hint(glosser, token, language, grammemes, here)
                 if hint is None:
                     report.missing.append(
                         "%s: no %s gloss for %r in slovnik; write `gloss: {%s: {%s: ...}}`"
                         % (here, language, token, language, token))
                     continue
                 pairs.append({token: hint})
-                report.count(unit_id, 'auto')
+                report.count(unit_id, 'glosses' if source == 'glosses' else 'auto')
                 if note:
                     report.notes.append("%s: %s -> %s  (%s)" % (isv, token, hint, note))
         result.append({'demando': prompt, 'rektatraduko': pairs})
@@ -343,7 +386,7 @@ BUILDERS = {
 
 
 def build_units(source_path, language, glosser):
-    """Read a lessonNN_exercises.yml and return the lesson's ordered unit list
+    """Read a lessonNN_structure.yml and return the lesson's ordered unit list
     for `language`: [{'id', 'type', 'title', 'items'}], with `items` compiled
     to the shapes the templates use (`items`/`title` are absent on built-in
     units).
@@ -401,5 +444,9 @@ def build_units(source_path, language, glosser):
     if report.missing:
         raise ValueError('\n'.join(report.missing))
     glosser.ambiguities.print(source_path)
+    for string, lang in sorted(glosser.untranslated):
+        print("[glosses] no %r translation of the interface gloss %r (add it to "
+              "enhavo/tradukenda/%s/fasado/glosoj.yml); using the English text" % (lang, string, lang),
+              file=sys.stderr)
     report.print(source_path, language)
     return units

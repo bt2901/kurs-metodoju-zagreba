@@ -125,9 +125,29 @@ The analyzer returns every parse of a form (`mylo` = noun, or past tense of `myt
 
 An annotation keeps the first parse whose tag contains all the listed grammemes (case-insensitive; POS names like `verb`/`noun` work because matching uses `tag.grammemes`, not `tag.POS`). No match fails the build and lists the available parses; an annotation that doesn't directly follow a word is an error. Braces are stripped before tokenizing and never reach the output. Unannotated words whose parses differ in lemma/POS are listed on stderr (`[ambiguous] …`); case/number-only ambiguity is deliberately not reported. **Known upstream bug:** the ISV pymorphy2 dictionaries report `tag.POS == None` for everything; `wordsense.analysis_key` compares `(POS, normal_form)` so it sharpens by itself once that is fixed. The lemma fix-ups (forced nominative etc.) live in `wordsense.lemma_of`, shared by texts and exercise hints.
 
+#### Word overrides (`glosses.py`)
+
+For words the analyzer or `slovnik` get wrong or lack (`kapučino` is read as an adjective and isn't in `slovnik`; `Nikola` is a name), one `glosses:` entry fixes the word everywhere it appears: text popovers, the new-words list, exercise hints and answers. Entries live under `glosses:` in `lessonNN_structure.yml` (that lesson) and in `enhavo/netradukenda/glosoj.yml` (whole course); the lesson's win. Each is keyed by a word as written (any inflected form, case-insensitive) or by a lemma:
+
+```yaml
+glosses:
+  kapučino:
+    lemma: kapučino                              # replaces the analyzer's lemma
+    gloss: {en: cappuccino, ru: капучино}        # popover + exercise hint (and typed answer, unless `answer` is set)
+    answer: {en: cappuccino}                     # optional: what a `translate` item expects typed
+  nikola:
+    gloss: male name                             # bare string = interface string, translated in tradukenda/<lang>/fasado/glosoj.yml
+    scope: local                                 # popover only: not in the new-words list / dictionary
+  necivilizovanogo:
+    lemma: civilizovany
+    morphemes: [ne, {civilizovan: stem}, ogo]    # forced split for the popover table; must spell the word
+```
+
+A bare string or `{lang: text | [texts]}` is shorthand for `gloss:`. A string gloss with no translation in that language's `fasado` falls back to the English text and is reported on stderr (`[glosses] …`). `lesson_builder` applies `lemma`/`morphemes` and stamps the token with a language-independent `gloss_key` in `NN.yml`; `generate.load()` resolves the per-language text into `leciono['glosoj']` (popovers, via `tradukajxo.html`) and, for `scope: course`, into `enhavo['vortaro']`; `exercise_builder.Glosser` consults the same entries before `slovnik`. Item-level overrides inside a unit (`{word: {lang: answer}}`, `gloss:` on a `translate-answer` sentence) are still the most specific and win.
+
 ### Lesson units and exercises (`exercise_builder.py`)
 
-If `enhavo/netradukenda/tekstoj/lessonNN_exercises.yml` exists, its ordered `units` list **is the lesson's tab list** and the single source of all its exercises (currently lesson 1; lesson 2 still goes through `legacy_units()` in [generate.py](generate.py), which wraps the old per-type/per-language files under `enhavo/tradukenda/<lang>/ekzercoj/` and `enhavo/netradukenda/ekzercoj/` — Esperanto-era placeholders — and can be deleted once lesson 2 has its own file).
+If `enhavo/netradukenda/tekstoj/lessonNN_structure.yml` exists, its ordered `units` list **is the lesson's tab list** and the single source of all its exercises (currently lesson 1; lesson 2 still goes through `legacy_units()` in [generate.py](generate.py), which wraps the old per-type/per-language files under `enhavo/tradukenda/<lang>/ekzercoj/` and `enhavo/netradukenda/ekzercoj/` — Esperanto-era placeholders — and can be deleted once lesson 2 has its own file).
 
 - **Built-in units:** `grammar`, `text`, `vocab` (bare strings) are the grammar/text/new-words pages; list them wherever you want them in the tab order.
 - **Exercise units:** `translate`, `translate-answer`, `cloze` (`[gap]` brackets), `choose` (`+correct`). Each needs an `id`, which is its URL (`NN/<id>/`); optional `title` (string or `{lang: str}`) overrides the tab caption; optional `for: [lang, ...]` restricts a unit to some L1s (a `choose` unit also drops out for any L1 missing from its `items` map). Any number of units of any type per lesson.

@@ -24,6 +24,7 @@ from collections import Counter
 from razdel import tokenize
 from isv_nlp_utils import constants
 
+import glosses
 import wordsense
 
 DEFAULT_DICT_PATH = os.environ.get('ISV_DICT_PATH', 'C:\\dev\\ISV_pymorphy2_dicts\\pymorphy2-dicts\\')
@@ -96,20 +97,41 @@ not_found = {'člověka', 'ljubogo', 'tvojego', 'sebę', 'nekulturnogo', 'den', 
 
 not_found = {'kostovati', 'ziťje', 'kapučiny', 'nekulturny', 'nikola', 'sendvič', 'imama', 'borodina', 'vědati', 'y', 'den', 'necivilizovany', 'veś', 'toj', 'imati', 'vladimir', 'hlopec', 'otec', 'kako'}
 
-def _parse_token(word, morph, isv_dict, grammemes=None, where='', ambiguities=None):
-    """Return a {'lemma': ..., 'morfemes': {stem: 'stem', suffix: tags}}
-    dict for a recognised word, or None if the analyzer doesn't know it.
+def _apply_override(result, word, key, entry, where):
+    """Fold a glosses.py entry into a parsed token: replace the lemma and/or
+    the morpheme split, and remember the entry's key (`gloss_key`) so the
+    build can attach the per-language gloss and respect `scope`."""
+    if entry.get('lemma'):
+        result['lemma'] = entry['lemma']
+    if 'morphemes' in entry:
+        result['morfemes'] = glosses.apply_morphemes(word, entry['morphemes'], where)
+    result['gloss_key'] = key
+    return result
+
+
+def _parse_token(word, morph, isv_dict, grammemes=None, where='', ambiguities=None, overrides=None):
+    """Return a {'lemma': ..., 'morfemes': [{piece: tags}, ...]} dict (plus
+    'gloss_key' if a glosses.py override applies) for a recognised word, or
+    None if the analyzer doesn't know it and there is no override for it.
 
     `grammemes` (from a `{...}` annotation in the source) picks which of the
     word's parses to use; without it the first parse is used and
     lemma/part-of-speech ambiguity is recorded in `ambiguities`."""
     if not word.isalpha():
         return None
+    overrides = overrides or {}
+    early_key, early = glosses.lookup(overrides, word)
     parses = morph.parse(word)
     if not parses:
-        return None
+        if early is None:
+            return None
+        return _apply_override({'lemma': word.lower(), 'morfemes': [{word: 'stem'}]},
+                               word, early_key, early, where)
 
-    word_parse = wordsense.choose_parse(word, parses, grammemes, where, ambiguities)
+    # an override that fixes the lemma or the split settles any ambiguity
+    settled = early is not None and ('lemma' in early or 'morphemes' in early)
+    word_parse = wordsense.choose_parse(word, parses, grammemes, where,
+                                        None if settled else ambiguities)
     _, stem, suffix = extract_stem_suffix(word, word_parse, isv_dict)
     morfemes = {stem: 'stem', suffix: str(word_parse.tag).replace(',', ' ')}
     morfemes.pop('', None)
@@ -117,13 +139,17 @@ def _parse_token(word, morph, isv_dict, grammemes=None, where='', ambiguities=No
     if lemma in not_found:
         print(word_parse, file=sys.stderr)
 
-    return {
+    result = {
         'lemma': lemma,
-        'morfemes': morfemes,
+        'morfemes': [{k: v} for k, v in morfemes.items()],
     }
+    key, entry = glosses.lookup(overrides, word, lemma)
+    if entry is not None:
+        _apply_override(result, word, key, entry, where)
+    return result
 
 
-def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None):
+def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, overrides=None):
     """Tokenize `text`, analyze every recognisable ISV word, and group the
     result into paragraphs (one per line break in the source), matching the
     shape of enhavo/netradukenda/tekstoj/NN.yml's `titolo`/`paragrafoj`.
@@ -137,13 +163,12 @@ def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None):
     paragraphs = [[]]
     for token, token_whitespace in zip(tokens, whitespace):
         grammemes = notes.pop(token.stop, None)
-        parsed = _parse_token(token.text, morph, isv_dict, grammemes, where, ambiguities)
+        parsed = _parse_token(token.text, morph, isv_dict, grammemes, where, ambiguities, overrides)
         if grammemes is not None and parsed is None:
             raise ValueError("%s: {%s} follows %r, which isn't a word the analyzer knows"
                              % (where, ' '.join(sorted(grammemes)), token.text))
         if parsed is not None:
-            morfemes = [{k: v} for k, v in parsed['morfemes'].items()]
-            paragraphs[-1].append({'token': {'lemma': parsed['lemma'], 'morfemes': morfemes}})
+            paragraphs[-1].append({'token': parsed})
         else:
             paragraphs[-1].append({'token': token.text})
 
@@ -159,9 +184,10 @@ def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None):
     return [p for p in paragraphs if p]
 
 
-def build_teksto(source_md_path, dict_path=None, morph=None):
+def build_teksto(source_md_path, dict_path=None, morph=None, overrides=None):
     """Read a `# Title` + body Markdown source file and return a dict with
-    `titolo` and `paragrafoj`, ready to be dumped as a lesson's teksto YAML."""
+    `titolo` and `paragrafoj`, ready to be dumped as a lesson's teksto YAML.
+    `overrides` are the lesson's word overrides (see glosses.py)."""
     with open(source_md_path, encoding='utf-8') as f:
         content = f.read()
 
@@ -177,8 +203,8 @@ def build_teksto(source_md_path, dict_path=None, morph=None):
     isv_dict = morph._units[0][0].dict
 
     ambiguities = wordsense.Ambiguities()
-    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict, source_md_path, ambiguities)
-    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict, source_md_path, ambiguities)
+    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict, source_md_path, ambiguities, overrides)
+    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict, source_md_path, ambiguities, overrides)
     ambiguities.print(source_md_path)
 
     titolo = titolo_paragraphs[0] if titolo_paragraphs else []

@@ -1,0 +1,6 @@
+# Word overrides for the whole course (a lesson's own `glosses:` in
+# lessonNN_structure.yml wins over these). Same format; see glosses.py.
+#
+#   vladimir: male name
+#   sendvič: {en: sandwich, ru: бутерброд}
+{}
