@@ -24,6 +24,13 @@ case-insensitive) or by a lemma:
         lemma: civilizovany
         morphemes: [ne, {civilizovan: stem}, ogo]
 
+`sense` picks one of the word's dictionary senses (instead of the most
+frequent one) by its English translation as slovnik writes it -- the full
+text, or a single word of it that identifies the sense:
+`sense: earth, soil, ground, land` vs `sense: Earth`. The sense's translation
+into each language is then used as the gloss. (One occurrence can say it
+inline instead: `zemji{sense: Earth}`, see wordsense.py.)
+
 `gloss`/`answer` are a bare string (an interface string, looked up in the
 language's `fasado` like "Dodatak" for "Appendix"; the text itself is the
 English fallback) or a `{lang: text | [texts]}` map. `scope: local` keeps the
@@ -39,7 +46,7 @@ import yaml
 
 import layout
 
-ENTRY_FIELDS = {'gloss', 'answer', 'lemma', 'morphemes', 'scope'}
+ENTRY_FIELDS = {'gloss', 'answer', 'lemma', 'morphemes', 'scope', 'sense'}
 SCOPES = ('course', 'local')
 _LANG_RE = re.compile(r'^[a-z]{2,3}$')
 COURSE_PATH = layout.COURSE_GLOSSES
@@ -73,6 +80,8 @@ def normalize(raw, where):
         entry.setdefault('scope', 'course')
         if entry['scope'] not in SCOPES:
             raise ValueError("%s: scope must be one of %s" % (here, ', '.join(SCOPES)))
+        if 'sense' in entry and not (isinstance(entry['sense'], str) and entry['sense'].strip()):
+            raise ValueError("%s: sense must be the English text of a dictionary sense" % here)
         if 'morphemes' in entry:
             entry['morphemes'] = _normalize_morphemes(entry['morphemes'], here)
         if not (entry.keys() - {'scope'}):

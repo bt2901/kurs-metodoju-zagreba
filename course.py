@@ -210,8 +210,8 @@ def check_lesson(n, languages):
     return out, spec
 
 
-def text_lemmas(n):
-    """[(lemma, gloss_key)] for every analysed word of the lesson text."""
+def text_words(n):
+    """[{'lemma', 'key', 'sense'}] for every analysed word of the lesson text."""
     path = layout.text_yml(n)
     if not os.path.exists(path):
         return []
@@ -221,11 +221,12 @@ def text_lemmas(n):
         for item in paragraph:
             token = item['token'] if item else None
             if isinstance(token, dict):
-                words.append((token['lemma'].replace('dʒ', 'đ'), token.get('gloss_key')))
+                words.append({'lemma': token['lemma'].replace('dʒ', 'đ'),
+                              'key': token.get('gloss_key'), 'sense': token.get('sense')})
     return words
 
 
-def check_cell(n, lang, spec, overrides, fasado, slovnik_words, glosser, deep):
+def check_cell(n, lang, spec, overrides, fasado, slovnik_words, glosser, deep, lexicon=None):
     """Problems of one lesson in one language."""
     out = []
 
@@ -261,14 +262,29 @@ def check_cell(n, lang, spec, overrides, fasado, slovnik_words, glosser, deep):
 
     if slovnik_words is not None:
         missing = []
-        for lemma, key in text_lemmas(n):
+        sense_problems = []
+        for word in text_words(n):
+            lemma, key = word['lemma'], word['key']
             entry = overrides.get(key) if key else None
-            if entry is not None and glosses.text(entry.get('gloss'), lang, fasado) is not None:
-                continue
-            if lemma in slovnik_words.get(lang, ()):
+            sense = word['sense']
+            if sense is None and entry is not None:
+                if glosses.text(entry.get('gloss'), lang, fasado) is not None:
+                    continue
+                sense = entry.get('sense')
+            if sense is not None and lexicon is not None:
+                try:
+                    if lexicon.entry(lemma, lang, sense) is not None:
+                        continue
+                except exercise_builder.SenseError as error:
+                    if str(error) not in sense_problems:
+                        sense_problems.append(str(error))
+                    continue
+            elif lemma in slovnik_words.get(lang, ()):
                 continue
             if lemma not in missing:
                 missing.append(lemma)
+        for problem in sense_problems:
+            add(ERROR, "sense: " + problem)
         if missing:
             add(WARN, "%d word(s) of the text show no translation in popovers: %s%s"
                 % (len(missing), ', '.join(missing[:10]), ' ...' if len(missing) > 10 else ''))
@@ -305,6 +321,7 @@ def check(args):
     for lang in languages:
         problems += check_language(lang, lingvoj[lang], columns, reference)
 
+    lexicon = exercise_builder.Glosser(slovnik, lambda: None)   # dictionary lookups only
     etm_morph = None
     for n in lessons:
         shared, spec = check_lesson(n, list(lingvoj))
@@ -321,7 +338,7 @@ def check(args):
                 fasado = load_fasado(lang)
                 glosser = exercise_builder.Glosser(slovnik, lambda: etm_morph, overrides, fasado)
             problems += check_cell(n, lang, spec, overrides, load_fasado(lang), slovnik_words, glosser,
-                                   not args.fast)
+                                   not args.fast, lexicon)
 
     built = set(layout.lessons())
     on_disk = sorted(

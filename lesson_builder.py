@@ -126,43 +126,48 @@ def _apply_override(result, word, key, entry, where):
     return result
 
 
-def _parse_token(word, morph, isv_dict, grammemes=None, where='', ambiguities=None, overrides=None):
+def _parse_token(word, morph, isv_dict, annotation=None, where='', ambiguities=None, overrides=None):
     """Return a {'lemma': ..., 'morfemes': [{piece: tags}, ...]} dict (plus
-    'gloss_key' if a glosses.py override applies) for a recognised word, or
-    None if the analyzer doesn't know it and there is no override for it.
+    'gloss_key' if a glosses.py override applies, and 'sense' if the source
+    says which dictionary sense is meant) for a recognised word, or None if
+    the analyzer doesn't know it and there is no override for it.
 
-    `grammemes` (from a `{...}` annotation in the source) picks which of the
-    word's parses to use; without it the first parse is used and
-    lemma/part-of-speech ambiguity is recorded in `ambiguities`."""
+    `annotation` (from a `{...}` after the word in the source) picks which of
+    the word's parses to use and/or which sense it has; without grammemes the
+    first parse is used and lemma/part-of-speech ambiguity is recorded in
+    `ambiguities`."""
     if not word.isalpha():
         return None
     overrides = overrides or {}
+    grammemes = annotation.grammemes if annotation else None
     early_key, early = glosses.lookup(overrides, word)
     parses = morph.parse(word)
     if not parses:
         if early is None:
             return None
-        return _apply_override({'lemma': word.lower(), 'morfemes': [{word: 'stem'}]},
-                               word, early_key, early, where)
+        result = _apply_override({'lemma': word.lower(), 'morfemes': [{word: 'stem'}]},
+                                 word, early_key, early, where)
+    else:
+        # an override that fixes the lemma or the split settles any ambiguity
+        settled = early is not None and ('lemma' in early or 'morphemes' in early)
+        word_parse = wordsense.choose_parse(word, parses, grammemes, where,
+                                            None if settled else ambiguities)
+        _, stem, suffix = extract_stem_suffix(word, word_parse, isv_dict)
+        morfemes = {stem: 'stem', suffix: str(word_parse.tag).replace(',', ' ')}
+        morfemes.pop('', None)
+        lemma = wordsense.lemma_of(word, word_parse, morph)
+        if lemma in not_found:
+            print(word_parse, file=sys.stderr)
 
-    # an override that fixes the lemma or the split settles any ambiguity
-    settled = early is not None and ('lemma' in early or 'morphemes' in early)
-    word_parse = wordsense.choose_parse(word, parses, grammemes, where,
-                                        None if settled else ambiguities)
-    _, stem, suffix = extract_stem_suffix(word, word_parse, isv_dict)
-    morfemes = {stem: 'stem', suffix: str(word_parse.tag).replace(',', ' ')}
-    morfemes.pop('', None)
-    lemma = wordsense.lemma_of(word, word_parse, morph)
-    if lemma in not_found:
-        print(word_parse, file=sys.stderr)
-
-    result = {
-        'lemma': lemma,
-        'morfemes': [{k: v} for k, v in morfemes.items()],
-    }
-    key, entry = glosses.lookup(overrides, word, lemma)
-    if entry is not None:
-        _apply_override(result, word, key, entry, where)
+        result = {
+            'lemma': lemma,
+            'morfemes': [{k: v} for k, v in morfemes.items()],
+        }
+        key, entry = glosses.lookup(overrides, word, lemma)
+        if entry is not None:
+            _apply_override(result, word, key, entry, where)
+    if annotation is not None and annotation.sense:
+        result['sense'] = annotation.sense
     return result
 
 
@@ -179,11 +184,11 @@ def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, ov
 
     paragraphs = [[]]
     for token, token_whitespace in zip(tokens, whitespace):
-        grammemes = notes.pop(token.stop, None)
-        parsed = _parse_token(token.text, morph, isv_dict, grammemes, where, ambiguities, overrides)
-        if grammemes is not None and parsed is None:
+        annotation = notes.pop(token.stop, None)
+        parsed = _parse_token(token.text, morph, isv_dict, annotation, where, ambiguities, overrides)
+        if annotation is not None and parsed is None:
             raise ValueError("%s: {%s} follows %r, which isn't a word the analyzer knows"
-                             % (where, ' '.join(sorted(grammemes)), token.text))
+                             % (where, wordsense.describe(annotation), token.text))
         if parsed is not None:
             paragraphs[-1].append({'token': parsed})
         else:

@@ -15,14 +15,51 @@ word:
 An annotation keeps the first parse whose tag contains all the listed
 grammemes (compared case-insensitively; part-of-speech names such as `verb`
 work too). Braces are stripped before tokenizing and never reach the output.
+
+An annotation may also say which dictionary sense of the word is meant, by
+its English translation as slovnik writes it (a full translation, or a single
+word of it that identifies the sense), alone or after the grammemes:
+
+    Ty jesi imal{sense: must, have to} znati, že my imamo{sense: have, possess, own} tut lavky.
 """
 
 import re
 import sys
+from collections import namedtuple
 
 # Spaces/tabs before the braces are swallowed, so `vidi {3per} dobrogo` and
 # `vidi{3per} dobrogo` both become `vidi dobrogo`.
 _ANNOTATION_RE = re.compile(r'[ \t]*\{([^{}\n]*)\}')
+
+
+Annotation = namedtuple('Annotation', 'grammemes sense')
+
+# `sense:` starts the English text of a sense (which may itself contain commas
+# and spaces); whatever precedes it are grammemes.
+_SENSE_RE = re.compile(r'(?:^|[\s,])sense\s*:')
+
+
+def parse_annotation(spec, where):
+    """'3per sense: have, own' -> Annotation({'3per'}, 'have, own')."""
+    sense = None
+    match = _SENSE_RE.search(spec)
+    if match:
+        sense = spec[match.end():].strip()
+        spec = spec[:match.start()]
+        if not sense:
+            raise ValueError("%s: `sense:` needs the English text of a sense" % where)
+    grammemes = parse_grammemes(spec)
+    if not grammemes and sense is None:
+        raise ValueError("%s: empty {} annotation" % where)
+    return Annotation(grammemes, sense)
+
+
+def describe(annotation):
+    """The annotation as the author would write it, for messages."""
+    parts = sorted(annotation.grammemes)
+    if annotation.sense:
+        parts.append('sense: ' + annotation.sense)
+    return ' '.join(parts)
 
 
 def parse_grammemes(spec):
@@ -31,27 +68,25 @@ def parse_grammemes(spec):
 
 
 def strip_annotations(text, where):
-    """Remove `{grammemes}` annotations from `text`.
+    """Remove `{grammemes / sense: ...}` annotations from `text`.
 
     Returns (clean_text, notes) where `notes` maps the offset in `clean_text`
-    at which the annotated word ENDS to its grammeme set; match it against
-    the `stop` offset of a token.
+    at which the annotated word ENDS to its Annotation; match it against the
+    `stop` offset of a token.
     """
     notes = {}
     pieces = []
     removed = 0
     last = 0
     for match in _ANNOTATION_RE.finditer(text):
-        grammemes = parse_grammemes(match.group(1))
-        if not grammemes:
-            raise ValueError("%s: empty {} annotation" % where)
+        annotation = parse_annotation(match.group(1), where)
         pieces.append(text[last:match.start()])
         last = match.end()
         position = match.start() - removed
         removed += match.end() - match.start()
         if position in notes:
             raise ValueError("%s: two annotations on one word: %r" % (where, match.group(0).strip()))
-        notes[position] = grammemes
+        notes[position] = annotation
     pieces.append(text[last:])
     return ''.join(pieces), notes
 

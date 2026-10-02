@@ -82,6 +82,10 @@ def split_synonyms(text):
     return list(dict.fromkeys(p.strip() for p in parts if p.strip()))
 
 
+class SenseError(ValueError):
+    """A `sense:` that doesn't pick exactly one dictionary sense of a word."""
+
+
 class Glosser(object):
     """Looks ISV words up in `slovnik` (via `pymorphy2` lemmatization) and
     returns per-L1 translations, so exercises don't have to spell them out.
@@ -152,26 +156,45 @@ class Glosser(object):
             return lemma
         return exact if exact in rows else None
 
-    def _translated_rows(self, lemma, language):
+    def _match_sense(self, lemma, sense):
+        """The row of `lemma` whose English translation is `sense` (the whole
+        text, or failing that one of its words); SenseError unless exactly
+        one row matches."""
+        rows = self._by_lemma().get(lemma, [])
+        if not rows:
+            raise SenseError("`sense: %s` is given for %r, which has no entry in slovnik" % (sense, lemma))
+        matching = [r for r in rows if str(r.en).strip() == sense] or \
+                   [r for r in rows if sense in split_synonyms(str(r.en))]
+        if len(matching) == 1:
+            return matching[0]
+        available = '; '.join(repr(str(r.en)) for r in rows)
+        if not matching:
+            raise SenseError("no sense of %r is %r in English; its senses are: %s" % (lemma, sense, available))
+        raise SenseError("`sense: %s` fits several senses of %r; give the full English text of one: %s"
+                         % (sense, lemma, available))
+
+    def _translated_rows(self, lemma, language, sense=None):
         """(row, translation text) for each sense of `lemma` that has a
-        translation into `language`, most frequent first."""
-        for row in self._by_lemma().get(lemma, []):
+        translation into `language`, most frequent first -- or only the sense
+        named by `sense` (its English text), if given."""
+        rows = [self._match_sense(lemma, sense)] if sense else self._by_lemma().get(lemma, [])
+        for row in rows:
             value = getattr(row, language, None)
             if isinstance(value, str) and value.strip():
                 yield row, value
 
-    def senses(self, lemma, language):
+    def senses(self, lemma, language, sense=None):
         """[(part of speech, [synonyms])] for `lemma`, most frequent first."""
         return [(row.partOfSpeech, split_synonyms(value))
-                for row, value in self._translated_rows(lemma, language)]
+                for row, value in self._translated_rows(lemma, language, sense)]
 
-    def entry(self, lemma, language):
+    def entry(self, lemma, language, sense=None):
         """The dictionary entry shown for `lemma` in popovers and on the
         new-words page: {'tradukajxo': the translation as slovnik writes it,
         'vortspeco': part of speech} of the most frequent sense that has a
         translation; None if there is none. This is the same sense the
         exercise hints and answers use (see `senses`)."""
-        for row, value in self._translated_rows(lemma, language):
+        for row, value in self._translated_rows(lemma, language, sense):
             return {'tradukajxo': value, 'vortspeco': row.partOfSpeech}
         return None
 
@@ -195,35 +218,38 @@ def auto_answers(glosser, word, language):
         text = glosser.entry_text(entry, 'answer', language)
         if text is not None:
             return text, None, 'glosses'
+    sense = entry.get('sense') if entry is not None else None
     lemma = glosser.lemma(word, prefer_exact=True)
-    senses = glosser.senses(lemma, language) if lemma else []
+    senses = glosser.senses(lemma, language, sense) if lemma else []
     if not senses:
         return None, None, None
     pos, answers = senses[0]
     if language == 'en' and pos.startswith('v.'):
         bare = [a[3:] if a.startswith('to ') else a for a in answers]
         answers = list(dict.fromkeys(['to ' + a for a in bare] + bare))
-    return (answers[0] if len(answers) == 1 else answers), _other_senses_note(senses), 'slovnik'
+    return (answers[0] if len(answers) == 1 else answers), (None if sense else _other_senses_note(senses)), 'slovnik'
 
 
-def auto_hint(glosser, token, language, grammemes=None, where=''):
-    """(hint, note, source) for a word token inside a sentence: a glosses.py
-    gloss as written, else the lemma's top slovnik translation capitalised
-    like the token. `grammemes` picks the parse."""
+def auto_hint(glosser, token, language, grammemes=None, where='', sense=None):
+    """(hint, note, source) for a word token inside a sentence: the sense the
+    sentence names inline (`sense`), else a glosses.py gloss as written, else
+    the sense a glosses.py entry names, else the lemma's top slovnik
+    translation, capitalised like the token. `grammemes` picks the parse."""
     analysis = glosser.analyze(token, grammemes, where)
     entry = glosser.override(token, analysis)
-    if entry is not None:
+    if sense is None and entry is not None:
         text = glosser.entry_text(entry, 'gloss', language)
         if text is not None:
             return (text if isinstance(text, str) else ', '.join(text)), None, 'glosses'
+        sense = entry.get('sense')
     lemma = glosser.lemma(token, grammemes=grammemes, where=where)
-    senses = glosser.senses(lemma, language) if lemma else []
+    senses = glosser.senses(lemma, language, sense) if lemma else []
     if not senses:
         return None, None, None
     hint = senses[0][1][0]
     if token[:1].isupper():
         hint = hint[:1].upper() + hint[1:]
-    return hint, _other_senses_note(senses), 'slovnik'
+    return hint, (None if sense else _other_senses_note(senses)), 'slovnik'
 
 
 class Report(object):
@@ -296,9 +322,9 @@ def parse_cloze_sentence(sentence, where):
 
 
 def tokenize_sentence(sentence, where='sentence'):
-    """Words and single punctuation marks, in order, as [(token, grammemes)]
-    where `grammemes` comes from a `{...}` annotation right after the word
-    (see wordsense.py) or is None."""
+    """Words and single punctuation marks, in order, as [(token, annotation)]
+    where `annotation` (grammemes and/or a sense) comes from a `{...}` right
+    after the word (see wordsense.py) or is None."""
     clean, notes = wordsense.strip_annotations(sentence, where)
     tokens = [(m.group(), notes.pop(m.end(), None)) for m in _TOKEN_RE.finditer(clean)]
     wordsense.check_all_attached(notes, where)
@@ -322,7 +348,11 @@ def build_translate(unit, language, where, glosser, report):
             answer = overrides[language]
             report.count(unit_id, 'override')
         else:
-            answer, note, source = auto_answers(glosser, isv, language)
+            try:
+                answer, note, source = auto_answers(glosser, isv, language)
+            except SenseError as error:
+                report.missing.append("%s: item %r: %s" % (where, isv, error))
+                continue
             if answer is None:
                 report.missing.append(
                     "%s: no %s translation for %r in slovnik; write `- %s: {%s: ...}`"
@@ -359,17 +389,23 @@ def build_translate_answer(unit, language, where, glosser, report):
             raise ValueError("%s: gloss override for %s names words not in the sentence: %s"
                              % (here, language, ', '.join(sorted(unknown))))
         pairs = []
-        for token, grammemes in tokens:
+        for token, annotation in tokens:
             if not re.match(r'\w', token):
-                if grammemes is not None:
+                if annotation is not None:
                     raise ValueError("%s: {%s} follows %r, which isn't a word"
-                                     % (here, ' '.join(sorted(grammemes)), token))
+                                     % (here, wordsense.describe(annotation), token))
                 pairs.append(token)
             elif token in overrides:
                 pairs.append({token: overrides[token]})
                 report.count(unit_id, 'override')
             else:
-                hint, note, source = auto_hint(glosser, token, language, grammemes, here)
+                try:
+                    hint, note, source = auto_hint(
+                        glosser, token, language, annotation.grammemes if annotation else None, here,
+                        annotation.sense if annotation else None)
+                except SenseError as error:
+                    report.missing.append("%s: %s" % (here, error))
+                    continue
                 if hint is None:
                     report.missing.append(
                         "%s: no %s gloss for %r in slovnik; write `gloss: {%s: {%s: ...}}`"

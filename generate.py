@@ -254,26 +254,53 @@ def load(language, gramatiko_transpose_headlines=2):
 
     enhavo['lecionoj'] = lecionoj
 
-    # Resolve each lesson's word overrides for this language: `glosoj` feeds
-    # the text popovers (keyed by the token's gloss_key); course-scope ones
-    # also become dictionary entries for the new-words list.
+    # Resolve each lesson's word overrides and senses for this language:
+    # `glosoj` feeds the text popovers (keyed by the token's gloss_key, or
+    # "lemma|sense" for an inline `{sense: ...}`); course-scope ones also
+    # become dictionary entries for the new-words list.
+    dictionary = exercise_builder.Glosser(slovnik, lambda: etm_morph)
     untranslated = set()
     course_glosses = {}
+    sense_errors = []
+
+    def sense_gloss(lemma, sense, where):
+        """The translation of the sense of `lemma` that `sense` names."""
+        try:
+            entry = dictionary.entry(lemma, language, sense)
+        except exercise_builder.SenseError as error:
+            sense_errors.append("%s: %s" % (where, error))
+            return None
+        return entry['tradukajxo'] if entry else None
+
     for leciono in lecionoj:
         glosoj = {}
+        where = layout.source_md(leciono['indekso']['cifre'])
         for paragraph in [leciono['teksto']['titolo']] + leciono['teksto']['paragrafoj']:
             for item in paragraph:
                 token = item['token'] if item else None
-                if not isinstance(token, dict) or 'gloss_key' not in token:
+                if not isinstance(token, dict):
                     continue
-                entry = leciono['overrides'][token['gloss_key']]
+                lemma = token['lemma'].replace("dʒ", "đ")
+                key = token.get('gloss_key')
+                entry = leciono['overrides'][key] if key else None
+                if token.get('sense'):      # inline {sense: ...}: this occurrence only
+                    gloss = sense_gloss(lemma, token['sense'], where)
+                    if gloss is not None:
+                        glosoj[token['lemma'] + '|' + token['sense']] = gloss
+                    continue
+                if entry is None:
+                    continue
                 gloss = glosses.text(entry.get('gloss'), language, enhavo['fasado'], untranslated)
+                if gloss is None and entry.get('sense'):
+                    gloss = sense_gloss(lemma, entry['sense'], where)
                 if gloss is None:
                     continue
-                glosoj[token['gloss_key']] = gloss
+                glosoj[key] = gloss
                 if entry['scope'] == 'course':
-                    course_glosses[token['lemma'].replace("dʒ", "đ")] = gloss
+                    course_glosses[lemma] = gloss
         leciono['glosoj'] = glosoj
+    if sense_errors:
+        raise ValueError('\n'.join(sense_errors))
     for string, lang in sorted(untranslated):
         print("[glosses] no %r translation of the interface gloss %r (add it to "
               "enhavo/tradukenda/%s/fasado/glosoj.yml); using the English text" % (lang, string, lang),
@@ -287,7 +314,6 @@ def load(language, gramatiko_transpose_headlines=2):
     # Popovers and the new-words page use the same dictionary lookup as the
     # exercises (exercise_builder.Glosser): the most frequent sense that has a
     # translation into this language.
-    dictionary = exercise_builder.Glosser(slovnik, lambda: etm_morph)
     not_found = set()
     for isv_lemma in all_words:
         entry = dictionary.entry(isv_lemma, language)
