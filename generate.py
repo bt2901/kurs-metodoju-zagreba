@@ -279,6 +279,7 @@ def load(language, gramatiko_transpose_headlines=2):
     for leciono in enhavo['lecionoj']:
         all_words |= set(leciono['vortoj']['teksto'])
 
+    not_found = set()
     for isv_lemma in all_words:
         found_indices = iskati(isv_lemma, "isv", slovnik)
         if len(found_indices):
@@ -288,6 +289,8 @@ def load(language, gramatiko_transpose_headlines=2):
             enhavo['vortaro'][isv_lemma] = {'tradukajxo': translated_word, 'vortspeco': pos}
         else:
             print(isv_lemma, file=sys.stderr)
+            not_found.add(isv_lemma)
+    print(not_found, file=sys.stderr)
     with open("enhavo.pkl", "wb") as f:
         pickle.dump(enhavo, f)
 

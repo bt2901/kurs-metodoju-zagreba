@@ -18,6 +18,7 @@ ISV_data_gathering checkout).
 
 import os
 import re
+import sys
 from collections import Counter
 
 from razdel import tokenize
@@ -89,6 +90,9 @@ def _whitespace_after_tokens(text, token_list):
             result.append('')
     return result
 
+not_found = {'člověka', 'ljubogo', 'tvojego', 'sebę', 'nekulturnogo', 'den', 'necivilizovanogo', 'sendvič', 'vědati', 'kulturų', 'črnogo', 'ogo', 'jedno', 'imati', 'kolikogo', 'myzljiti', 'togo', 'čašų', 'zemjų', 'vladimir', 'boų', 'pauzų', 'tutogo', 'dobrogo', 'imamų', 'sidti', 'veś', 'jedinogo', 'kostovati', 'čego', 'kakogo', 'ziťje', 'lavkų', 'hlopca', 'tovariša', 'bělogo', 'siděti', 'direktora', 'nikogo', 'samogo', 'začego', 'pokų', 'potrěbnogo', 'kapučinogo', 'nikolų', 'žestokogo', 'borodinų', 'slabogo', 'kulturnogo', 'otca'}
+
+not_found = {'kostovati', 'ziťje', 'kapučiny', 'nekulturny', 'nikola', 'sendvič', 'imama', 'borodina', 'vědati', 'y', 'den', 'necivilizovany', 'veś', 'toj', 'imati', 'vladimir', 'hlopec', 'otec', 'kako'}
 
 def _parse_token(word, morph, isv_dict):
     """Return a {'lemma': ..., 'morfemes': {stem: 'stem', suffix: tags}}
@@ -103,9 +107,44 @@ def _parse_token(word, morph, isv_dict):
     _, stem, suffix = extract_stem_suffix(word, word_parse, isv_dict)
     morfemes = {stem: 'stem', suffix: str(word_parse.tag).replace(',', ' ')}
     morfemes.pop('', None)
+    # dirty fix: manually force word to be in a nominative
+    # for some reason it tends to not work with ISV pymorphy2 dictionaries
+    lemma = word_parse.normal_form
+    lemma_tags = morph.parse(lemma)[0].tag
+    if any(pos in lemma_tags.grammemes for pos in ['adj', 'noun', 'pron']):
+        # dirty fix: manually select a 'correct' parse >_>
+        if word.lower() == "jedno":
+            lemma = 'jedin'
+        elif word.lower() == "sę":
+            lemma = 'sę'
+        elif word.lower() == "ljudi":
+            lemma = 'ljudi'
+        #elif word.lower() == "začto":  #TODO: no adverbs in pymorphy for now...
+        #    lemma = 'začto'
+        elif word.lower() in ["ja", "mně"]:
+            lemma = 'ja'
+        elif "nom" not in lemma_tags.grammemes and "indecl" not in lemma_tags.grammemes:
+            target = {"nom"}
+            if "int" in lemma_tags.grammemes:
+                target = {"nom"}
+            if "prs" in lemma_tags.grammemes:
+                target = {"nom", "sing"}
+            if "adj" in lemma_tags.grammemes:
+                target = {"nom", "sing", "masc"}
+            if "noun" in lemma_tags.grammemes:
+                target = {"nom", "sing"}
+            tmp = word_parse.inflect(target)
+            if tmp is None:  # print debug info before crashing
+                print(word)
+                print([lemma, lemma_tags])
+                print(word_parse)
+            lemma = tmp.word
+    lemma = lemma.replace('d\u0292', '\u0111')  # dʒ -> đ
+    if lemma in not_found:
+        print(parses[0], file=sys.stderr)
 
     return {
-        'lemma': word_parse.normal_form.replace('d\u0292', '\u0111'),  # dʒ -> đ
+        'lemma': lemma,
         'morfemes': morfemes,
     }
 
