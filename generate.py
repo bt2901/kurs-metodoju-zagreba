@@ -18,12 +18,6 @@ import glosses
 TOTAL_N = 3
 import pickle
 
-# A lesson's units (see exercise_builder.py) are its tabs, in order. Lessons
-# without a lessonNN_structure.yml (see legacy_units) get this default set.
-DEFAULT_UNITS = [{'id': BUILTIN['id'], 'type': unit_type}
-                 for unit_type, BUILTIN in exercise_builder.BUILTIN_UNITS.items()]
-
-
 def exercise_caption(unit, fasado, number):
     """Tab caption for an exercise unit: its own `title`, else the type's
     label (unnumbered types) or 'Ekzerco N' (numbered ones)."""
@@ -71,21 +65,11 @@ def build_tabs(units, fasado):
     return tabs
 
 
-def legacy_units(language, i_padded):
-    """Units for a lesson that has no lessonNN_structure.yml: the built-in
-    tabs plus the old per-type, per-language exercise files (already in
-    compiled form). Kept only until every lesson has an exercises file."""
-    def load_yml(path):
-        return yaml.load(open(path, encoding="utf8"), yaml.Loader)
-
-    return DEFAULT_UNITS + [
-        {'id': 'ekzerco1', 'type': 'translate', 'title': None,
-         'items': load_yml('enhavo/tradukenda/' + language + '/ekzercoj/traduku/' + i_padded + '.yml')},
-        {'id': 'ekzerco2', 'type': 'cloze', 'title': None,
-         'items': load_yml('enhavo/netradukenda/ekzercoj/kompletigu-la-frazojn/' + i_padded + '.yml')},
-        {'id': 'ekzerco3', 'type': 'translate-answer', 'title': None,
-         'items': load_yml('enhavo/tradukenda/' + language + '/ekzercoj/traduku-kaj-respondu/' + i_padded + '.yml')},
-    ]
+def default_units(has_grammar):
+    """The units of a lesson that has no lessonNN_structure.yml yet: just its
+    built-in pages (the grammar page only if there are grammar notes)."""
+    types = ['text', 'vocab'] + (['grammar'] if has_grammar else [])
+    return [{'id': exercise_builder.BUILTIN_UNITS[t]['id'], 'type': t} for t in types]
 
 
 def join_morphemes(yaml_str):
@@ -238,7 +222,8 @@ def load(language, gramatiko_transpose_headlines=2):
         leciono['vortoj']['pliaj'] = []
 
         path = 'enhavo/netradukenda/vortoj/' + i_padded + '.yml'
-        leciono['vortoj']['pliaj'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
+        if os.path.exists(path):
+            leciono['vortoj']['pliaj'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader) or []
 
         for paragrafo in leciono['teksto']['paragrafoj']:
             for vorto in paragrafo:
@@ -254,28 +239,27 @@ def load(language, gramatiko_transpose_headlines=2):
                         leciono['vortoj']['teksto'].append(radiko)
                         vortoj[radiko.lower()] = True
 
-        path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
-
-        gramatiko_teksto = open(path, encoding="utf8").read()
-        gramatiko_titoloj = get_markdown_headlines(gramatiko_teksto)
-        gramatiko_teksto = transpose_headlines(gramatiko_teksto, gramatiko_transpose_headlines)
-
-        gramatiko = {
-            'teksto': gramatiko_teksto,
-            'titoloj': gramatiko_titoloj,
-        }
-        leciono['gramatiko'] = gramatiko
-
         # If a lessonNN_structure.yml exists, its unit list is the lesson's
         # tab list and the single source of all its exercises (see
-        # exercise_builder.py); other lessons fall back to the old layout.
+        # exercise_builder.py); a lesson without one has just its built-in pages.
+        grammar_path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
         if os.path.exists(structure_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
             glosser = exercise_builder.Glosser(slovnik, lambda: etm_morph, overrides, enhavo['fasado'])
             units = exercise_builder.build_units(structure_path, language, glosser)
         else:
-            units = legacy_units(language, i_padded)
+            units = default_units(os.path.exists(grammar_path))
+
+        # The grammar notes are read only for a lesson that has a `grammar` unit.
+        if any(unit['type'] == 'grammar' for unit in units):
+            gramatiko_teksto = open(grammar_path, encoding="utf8").read()
+            leciono['gramatiko'] = {
+                'teksto': transpose_headlines(gramatiko_teksto, gramatiko_transpose_headlines),
+                'titoloj': get_markdown_headlines(gramatiko_teksto),
+            }
+        else:
+            leciono['gramatiko'] = None
 
         leciono['units'] = units
         leciono['tabs'] = build_tabs(units, enhavo['fasado'])

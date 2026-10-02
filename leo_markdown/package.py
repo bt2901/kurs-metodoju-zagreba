@@ -44,8 +44,9 @@ def kreu_md(enhavo, printendaj):
         raise ValueError("no such exercise unit(s): %s" % sorted(set(wanted_units) - all_unit_ids))
 
     # Ŝanĝu __ al **, ĉar nur tio Pandoc ŝajne komprenas.
-    for i in range(len(enhavo['lecionoj'])):
-        enhavo['lecionoj'][i]['gramatiko']['teksto'] = re.sub('__', '**', enhavo['lecionoj'][i]['gramatiko']['teksto'])
+    for leciono in enhavo['lecionoj']:
+        if leciono['gramatiko']:
+            leciono['gramatiko']['teksto'] = re.sub('__', '**', leciono['gramatiko']['teksto'])
 
     printendaj = dict(printendaj, lecionoj=list(lesson_numbers))
     rendered = env.get_template('arangxo.md').render(enhavo=enhavo, printendaj=printendaj)

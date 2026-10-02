@@ -1,0 +1,11 @@
+# Lesson 2: what the lesson consists of (see lesson01_structure.yml for the
+# format and the options).
+#
+# Draft: just the text and its vocabulary. Add `- grammar` once
+# tradukenda/<lang>/gramatiko/02.md holds ISV grammar notes for it, and
+# exercise units (`- id: ...` / `type: ...`) when there is something to
+# practise; add word overrides under `glosses:`.
+units:
+
+- text
+- vocab

@@ -67,11 +67,21 @@ def tag_grammemes(parse):
     return frozenset(g.lower() for g in parse.tag.grammemes)
 
 
+# TEMPORARY: the community hasn't settled how particles, conjunctions,
+# interjections (and the adverb reading of words like `ne`) differ, so for
+# deciding whether a form is ambiguous they all count as one part of speech.
+# Words whose only competing parses are in this group are not reported.
+FUNCTION_WORD_POS = frozenset({'PRCL', 'CONJ', 'INTJ', 'ADVB'})
+
+
 def analysis_key(parse):
-    """What makes two parses 'really' different words. The ISV dictionaries
-    currently report POS=None for everything, so for now this is the lemma
-    alone; it gets sharper by itself once that is fixed upstream."""
-    return (parse.tag.POS, parse.normal_form)
+    """What makes two parses 'really' different words: (POS, lemma), with the
+    function-word POS merged (see FUNCTION_WORD_POS). If the dictionary
+    reports no POS (None), the lemma alone decides."""
+    pos = parse.tag.POS
+    if pos in FUNCTION_WORD_POS:
+        pos = 'OTHER'
+    return (pos, parse.normal_form)
 
 
 def choose_parse(word, parses, grammemes, where, ambiguities=None):

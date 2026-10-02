@@ -53,6 +53,7 @@
     {% endfor %}
   </ul>
   
+  {% if leciono.vortoj.pliaj %}
   <h3>
     {{ enhavo.fasado['Pliaj'] | default('', true) }}
   </h3>
@@ -80,6 +81,7 @@
       </li>
     {% endfor %}
   </ul>
+  {% endif %}
 
 </div>
 
