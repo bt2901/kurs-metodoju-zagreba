@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Originally the engine behind [esperanto12.net](https://esperanto12.net/) / [kurso-zagreba-metodo](https://github.com/Esperanto/kurso-zagreba-metodo): an Esperanto course rendered from structured YAML into static HTML/EPUB/PDF/Anki decks, in 40+ target languages (see `agordoj/lingvoj.yml`).
 
-This fork (`bt.uytya`/Viktor Bulatov) is **mid-conversion from Esperanto into an Interslavic (ISV) course**. Recent commits (`95fa738db remove non-slavic languages`, `a74110f8e remove vorto and ekzerco for now`, `eb1a7072e remove all lections >1 for now`, `fa99ceba9 PoC for EN`) have stripped the repo down to a single lesson (lesson 01) and a single target language (`en`) as a proof of concept while the content model is reworked. Do not treat the reduced state (`TOTAL_N = 2` in [generate.py](generate.py) and [html_generiloj/generi.py](html_generiloj/generi.py), meaning "lessons range(1, 2)" = just lesson 1) as accidental breakage — it's deliberate scope-narrowing during the port. Expect `TOTAL_N` to need updating as more lessons come back (the HTML generator now derives its lesson count from the loaded content, so only the one in `generate.py` is left).
+This fork (`bt.uytya`/Viktor Bulatov) is **mid-conversion from Esperanto into an Interslavic (ISV) course**. Recent commits (`95fa738db remove non-slavic languages`, `a74110f8e remove vorto and ekzerco for now`, `eb1a7072e remove all lections >1 for now`, `fa99ceba9 PoC for EN`) have stripped the repo down to a single lesson (lesson 01) and a single target language (`en`) as a proof of concept while the content model is reworked. Do not treat the reduced state (`TOTAL_N` in [layout.py](layout.py): lessons `range(1, TOTAL_N)` are built) as accidental breakage — it's deliberate scope-narrowing during the port. `course.py new-lesson` bumps it as lessons come back.
 
 
 ### Positioning (why the content model is being reworked at all)
@@ -47,7 +47,7 @@ These are agreed directions for the reworked model. Where they aren't in the cod
 - **Recursive content units.** A lesson is a tree of typed units (`prose | exercise | image | interactive`) and units **nest**; a "subsection" is just a nested unit, not a new type. This generalizes the current fixed tabs (Teksto / Vortoj / Gramatiko / three exercise types). Staging (e.g. Lesson 1's A/B/C) = ordered child units.
 - **Conditional asides.** Any unit may carry a `for="…"` L1-visibility set; the per-language build includes or drops it. This is how "a case/aspect primer only for `bg`/`mk`" works without forking lessons — shared lessons with optional sections, not per-L1 lessons.
 - **Vocab scope: `local` vs `course`.** The Zagreb premise is a cumulative, frequency-ranked `course` word list, reused across lessons and in the shared gloss pool. `local` vocab is scoped to **(lesson, L1)**, illustrative, and must **not** enter the cumulative list or the reuse pool. Lesson 1's alphabet-decoding words are `local`. Tag entries accordingly so throwaway bridge-vocab doesn't pollute frequency stats.
-- **Ragged (lesson × L1) coverage.** Current coverage is a single global `TOTAL_N` (`range(1, TOTAL_N)`). The target is a per-**(lesson × L1)** status grid (`written | stub | absent`), so a lesson can exist for `ru`+`pl` but not yet for another L1; the build renders, per L1, only `written` cells. This supersedes the global-N model when implemented — until then `TOTAL_N` stays global and both constants move together.
+- **Ragged (lesson × L1) coverage.** Current coverage is a single global `TOTAL_N` in `layout.py` (`range(1, TOTAL_N)`). The target is a per-**(lesson × L1)** status grid (`written | stub | absent`), so a lesson can exist for `ru`+`pl` but not yet for another L1; the build renders, per L1, only `written` cells. This supersedes the global-N model when implemented — until then `TOTAL_N` stays global (`course.py check` already prints a lesson × language status grid derived from the files).
 - **Coverage matrix + policy asserts (build tooling, not yet present; there's no test suite).** Derive the coverage map from source so it can't drift. A hand-written landing-page "highlights" caption references block IDs; the build **fails** on a dead reference (a caption pointing at a deleted block) and **warns** on an undescribed conditional block. Captions are authored (editorial voice); coordinates are derived (checked). Never hand-maintain the map itself.
 
 ### Division of labor
@@ -94,11 +94,20 @@ Limit output to specific parts/lessons (see `--help` for all choices):
 python generate.py --lingvo en --eligformo md --printendaj-partoj ekzercoj solvoj --printendaj-unuoj cloze --printendaj-lecionoj 1
 ```
 
-There is no test suite and no linter configured in this repo currently.
+Check what a lesson or language still lacks, and scaffold new ones (see `python course.py --help`):
+
+```bash
+python course.py check                       # errors (would break the build), warnings, and a lesson x language grid; exit 1 on errors
+python course.py check --lingvo hr --fast    # --fast skips the exercise check (it loads the ISV analyzer)
+python course.py new-lesson 3 [--grammar]    # source stub + structure stub, bumps TOTAL_N; never overwrites
+python course.py new-language pl --name Polski [--name-eo pola] [--from en]   # copies UI strings, adds a lingvoj.yml entry
+```
+
+There is no test suite and no linter configured in this repo currently; `course.py check` is the closest thing to a consistency test.
 
 ## Architecture
 
-`generate.py` is the single entry point and orchestrates everything:
+Where source files live is defined once in [layout.py](layout.py) (used by `generate.py`, `glosses.py` and `course.py`; also holds `TOTAL_N`). `generate.py` is the entry point of the build and orchestrates everything:
 
 1. `load(language)` first regenerates any lesson text that has a Markdown source (see below), then reads YAML content from `enhavo/` and the ISV dictionary from `isv_nlp_utils`, and assembles one big `enhavo` (= "content") dict: `vortaro` (dictionary), `finajxoj` (endings), `ordoj` (numbers/months/seasons/weekdays), `fasado` (UI strings), `enkonduko`/`post` (intro/outro markdown), and `lecionoj` (a list of per-lesson dicts with `teksto`, `gramatiko`, `ekzercoj`, `vortoj`).
 2. Content under `enhavo/netradukenda/` is language-independent (lesson texts, exercise skeletons, numbers/months tables); content under `enhavo/tradukenda/<lang>/` is per-target-language (grammar prose, UI strings/`fasado`, `en`'s legacy vocab files, `gramatiko`, `ekzercoj`).

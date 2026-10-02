@@ -336,7 +336,8 @@ def build_translate_answer(unit, language, where, glosser, report):
         here = "%s %r" % (where, isv)
         prompt = _l1(item['prompt'], language, here + ' prompt')
         if prompt is None:
-            raise ValueError("%s: no prompt for %r" % (here, language))
+            report.missing.append("%s: no prompt for %r; write `prompt: {%s: ...}`" % (here, language, language))
+            continue
         overrides = (item.get('gloss') or {}).get(language) or {}
         tokens = tokenize_sentence(isv, here)
         unknown = set(overrides) - set(t for t, _ in tokens)

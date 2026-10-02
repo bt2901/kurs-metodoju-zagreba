@@ -37,10 +37,12 @@ import re
 
 import yaml
 
+import layout
+
 ENTRY_FIELDS = {'gloss', 'answer', 'lemma', 'morphemes', 'scope'}
 SCOPES = ('course', 'local')
 _LANG_RE = re.compile(r'^[a-z]{2,3}$')
-COURSE_PATH = 'enhavo/netradukenda/glosoj.yml'
+COURSE_PATH = layout.COURSE_GLOSSES
 
 
 def normalize(raw, where):

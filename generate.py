@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import yaml
-from yaml.resolver import Resolver
+import yamlsetup  # noqa: F401 (YAML On/Off/Yes/No stay strings)
 import glob
 import re
 import os
@@ -14,8 +14,8 @@ import leo_markdown
 import lesson_builder
 import exercise_builder
 import glosses
-
-TOTAL_N = 3
+import layout
+from layout import TOTAL_N
 import pickle
 
 def exercise_caption(unit, fasado, number):
@@ -79,17 +79,6 @@ def iskati(stroka, jezyk, sheet):
     result = sheet[sheet[jezyk] == stroka]
     return result.index.values.tolist()
 
-# remove resolver entries for On/Off/Yes/No
-# https://stackoverflow.com/a/36470466/52023
-for ch in "OoYyNn":
-    if len(Resolver.yaml_implicit_resolvers[ch]) == 1:
-        del Resolver.yaml_implicit_resolvers[ch]
-    else:
-        Resolver.yaml_implicit_resolvers[ch] = [x for x in
-                                                Resolver.yaml_implicit_resolvers[ch] if
-                                                x[0] != 'tag:yaml.org,2002:bool']
-
-
 def transpose_headlines(markdown, level):
     prefix = ''
     for i in range(level):
@@ -147,17 +136,17 @@ def load(language, gramatiko_transpose_headlines=2):
                                                       yaml.Loader)
 
     enhavo['fasado'] = {}
-    paths = glob.glob('enhavo/tradukenda/' + language + '/fasado/*.yml')
+    paths = glob.glob(layout.fasado_dir(language) + '*.yml')
     for path in paths:
         tradukajxoj = yaml.load(open(path, encoding="utf8").read(), yaml.Loader)
         enhavo['fasado'].update(tradukajxoj)
 
-    path = 'enhavo/tradukenda/' + language + '/enkonduko.md'
+    path = layout.intro(language)
     enkonduko = open(path, encoding="utf8").read()
     # enkonduko = transpose_headlines(enkonduko, 1)
     enhavo['enkonduko'] = enkonduko
 
-    path = 'enhavo/tradukenda/' + language + '/post.md'
+    path = layout.outro(language)
     enhavo['post'] = open(path, encoding="utf8").read()
     enhavo['post'] = transpose_headlines(enhavo['post'], 2)
 
@@ -179,11 +168,11 @@ def load(language, gramatiko_transpose_headlines=2):
 
         # Word overrides (glosses.py): course-wide plus the lesson's own
         # `glosses:`, shared by the text build, the vocabulary and the exercises.
-        structure_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_structure.yml'
+        structure_path = layout.structure(i)
         overrides = glosses.load_overrides(structure_path)
         leciono['overrides'] = overrides
 
-        path = 'enhavo/netradukenda/tekstoj/' + i_padded + '.yml'
+        path = layout.text_yml(i)
 
         # If a plaintext-ish Markdown source exists for this lesson, it's the
         # source of truth: regenerate the tagged YAML from it (see
@@ -191,7 +180,7 @@ def load(language, gramatiko_transpose_headlines=2):
         # workflow that used to live in maintenance/uczebnik.ipynb). The YAML
         # file stays as the intermediate build artifact that the rest of the
         # pipeline (and any human inspecting a lesson) reads.
-        source_md_path = 'enhavo/netradukenda/tekstoj/lesson' + i_padded + '_source.md'
+        source_md_path = layout.source_md(i)
         if os.path.exists(source_md_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
@@ -221,7 +210,7 @@ def load(language, gramatiko_transpose_headlines=2):
         leciono['vortoj']['teksto'] = []
         leciono['vortoj']['pliaj'] = []
 
-        path = 'enhavo/netradukenda/vortoj/' + i_padded + '.yml'
+        path = layout.extra_words(i)
         if os.path.exists(path):
             leciono['vortoj']['pliaj'] = yaml.load(open(path, encoding="utf8").read(), yaml.Loader) or []
 
@@ -242,7 +231,7 @@ def load(language, gramatiko_transpose_headlines=2):
         # If a lessonNN_structure.yml exists, its unit list is the lesson's
         # tab list and the single source of all its exercises (see
         # exercise_builder.py); a lesson without one has just its built-in pages.
-        grammar_path = 'enhavo/tradukenda/' + language + '/gramatiko/' + i_padded + '.md'
+        grammar_path = layout.grammar(language, i)
         if os.path.exists(structure_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
@@ -372,7 +361,7 @@ def get_cmdline_arguments():
 
 def main():
     args = get_cmdline_arguments()
-    lingvoj = yaml.load(open('agordoj/lingvoj.yml', encoding="utf8").read(), yaml.Loader)
+    lingvoj = yaml.load(open(layout.LINGVOJ, encoding="utf8").read(), yaml.Loader)
     if args.eligformo == 'html':
         # if args.lingvo not in lingvoj.keys():
         #    sys.exit("'" + args.lingvo + "' ne estas havebla lingvokodo.")
@@ -389,4 +378,5 @@ def main():
                                                          'unuoj': args.printendaj_unuoj})
 
 
-main()
+if __name__ == '__main__':
+    main()
