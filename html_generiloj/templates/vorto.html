@@ -8,7 +8,11 @@
     {% set klavo = vorto.token.lemma %}
     {{klavo}}
   " data-content="
-    {% set klavo = vorto.token.gloss_key or vorto.token.lemma %}
+    {# use the override's key only if the override has a gloss for this language; one that only fixes the lemma/split must still look the word up in the dictionary #}
+    {% set klavo = vorto.token.lemma %}
+    {% if vorto.token.gloss_key and leciono is defined and leciono.glosoj and vorto.token.gloss_key in leciono.glosoj %}
+      {% set klavo = vorto.token.gloss_key %}
+    {% endif %}
     {% include 'tradukajxo.html' %}
     <table>
     {% if vorto.token.morfemes|length > 0 -%} 

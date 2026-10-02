@@ -152,14 +152,28 @@ class Glosser(object):
             return lemma
         return exact if exact in rows else None
 
-    def senses(self, lemma, language):
-        """[(part of speech, [synonyms])] for `lemma`, most frequent first."""
-        result = []
+    def _translated_rows(self, lemma, language):
+        """(row, translation text) for each sense of `lemma` that has a
+        translation into `language`, most frequent first."""
         for row in self._by_lemma().get(lemma, []):
             value = getattr(row, language, None)
             if isinstance(value, str) and value.strip():
-                result.append((row.partOfSpeech, split_synonyms(value)))
-        return result
+                yield row, value
+
+    def senses(self, lemma, language):
+        """[(part of speech, [synonyms])] for `lemma`, most frequent first."""
+        return [(row.partOfSpeech, split_synonyms(value))
+                for row, value in self._translated_rows(lemma, language)]
+
+    def entry(self, lemma, language):
+        """The dictionary entry shown for `lemma` in popovers and on the
+        new-words page: {'tradukajxo': the translation as slovnik writes it,
+        'vortspeco': part of speech} of the most frequent sense that has a
+        translation; None if there is none. This is the same sense the
+        exercise hints and answers use (see `senses`)."""
+        for row, value in self._translated_rows(lemma, language):
+            return {'tradukajxo': value, 'vortspeco': row.partOfSpeech}
+        return None
 
 
 def _other_senses_note(senses):

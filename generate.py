@@ -75,10 +75,6 @@ def default_units(has_grammar):
 def join_morphemes(yaml_str):
     return ''.join([list(m.keys())[0] for m in yaml_str])
 
-def iskati(stroka, jezyk, sheet):
-    result = sheet[sheet[jezyk] == stroka]
-    return result.index.values.tolist()
-
 def transpose_headlines(markdown, level):
     prefix = ''
     for i in range(level):
@@ -288,14 +284,15 @@ def load(language, gramatiko_transpose_headlines=2):
         all_words |= set(leciono['vortoj']['teksto'])
     all_words -= set(course_glosses)
 
+    # Popovers and the new-words page use the same dictionary lookup as the
+    # exercises (exercise_builder.Glosser): the most frequent sense that has a
+    # translation into this language.
+    dictionary = exercise_builder.Glosser(slovnik, lambda: etm_morph)
     not_found = set()
     for isv_lemma in all_words:
-        found_indices = iskati(isv_lemma, "isv", slovnik)
-        if len(found_indices):
-            idx = found_indices[0]
-            translated_word = slovnik.loc[idx][language]
-            pos = slovnik.loc[idx]['partOfSpeech']
-            enhavo['vortaro'][isv_lemma] = {'tradukajxo': translated_word, 'vortspeco': pos}
+        entry = dictionary.entry(isv_lemma, language)
+        if entry is not None:
+            enhavo['vortaro'][isv_lemma] = entry
         else:
             print(isv_lemma, file=sys.stderr)
             not_found.add(isv_lemma)
