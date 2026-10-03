@@ -28,6 +28,7 @@ import yamlsetup  # noqa: F401 (YAML On/Off/Yes/No stay strings)
 import exercise_builder
 import glosses
 import layout
+import wordsense
 
 ERROR, WARN, INFO = 'ERROR', 'warn', 'info'
 Problem = namedtuple('Problem', 'level lesson lang message')
@@ -302,7 +303,8 @@ def load_slovnik(languages):
         if lang in slovnik.columns:
             column = slovnik[lang]
             present = column.notna() & (column.astype(str).str.strip() != '')
-            words[lang] = set(slovnik.loc[present, 'isv'])
+            words[lang] = {variant for headword in slovnik.loc[present, 'isv'].astype(str)
+                           for variant in wordsense.split_variants(headword) + [headword]}
     return set(slovnik.columns), words, slovnik
 
 

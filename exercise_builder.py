@@ -109,7 +109,10 @@ class Glosser(object):
             self._rows = {}
             ordered = self._slovnik.sort_values('frequency', ascending=False, kind='stable')
             for row in ordered.itertuples():
-                self._rows.setdefault(row.isv, []).append(row)
+                # under the headword as written, and under each spelling it lists
+                # (`iměti, imati` is also `imati`); most frequent first throughout
+                for key in dict.fromkeys([row.isv] + wordsense.split_variants(row.isv)):
+                    self._rows.setdefault(key, []).append(row)
         return self._rows
 
     def analyze(self, word, grammemes=None, where='', note_ambiguity=True):
