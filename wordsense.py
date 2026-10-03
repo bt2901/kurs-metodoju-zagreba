@@ -62,6 +62,43 @@ def describe(annotation):
     return ' '.join(parts)
 
 
+# Words that slovnik lists only as one of these never inflect, so the
+# analyzer has nothing to say about them -- and the ISV dictionaries are
+# missing many of them, which makes it guess (`i` as the bare adjective ending
+# `y`; `poka` has no conjunction parse at all). For such a word the slovnik
+# spelling itself is the lemma.
+INDECLINABLE_POS = frozenset({'adv.', 'prep.', 'intj.', 'conj.', 'particle'})
+# Annotations that ask for that reading explicitly: `poka{conj}`.
+INDECLINABLE_TAGS = frozenset({'adv', 'advb', 'prep', 'intj', 'conj', 'prcl', 'part', 'particle'})
+
+
+def split_variants(headword):
+    """'iměti, imati' -> ['iměti', 'imati']: a slovnik headword may list
+    several spellings; parenthetical remarks are dropped."""
+    text = re.sub(r'\([^)]*\)', '', headword)
+    return [v.strip() for v in text.split(',') if v.strip()]
+
+
+def indeclinable_words(slovnik):
+    """Lowercase spellings (variants included) that slovnik lists only as an
+    adverb, preposition, interjection, conjunction or particle."""
+    parts = {}
+    for headword, pos in zip(slovnik['isv'].astype(str), slovnik['partOfSpeech'].astype(str)):
+        for variant in split_variants(headword):
+            parts.setdefault(variant.lower(), set()).add(pos)
+    return frozenset(word for word, found in parts.items() if found <= INDECLINABLE_POS)
+
+
+def use_dictionary_form(word, grammemes, indeclinable):
+    """Should `word` be taken as its slovnik spelling instead of being parsed?
+    Yes if slovnik knows it only as an indeclinable word -- unless the author
+    asked for a particular parse with grammemes (`vse{pron}`); a part-of-speech
+    annotation like `{conj}` asks for exactly this reading."""
+    if not indeclinable or word.lower() not in indeclinable:
+        return False
+    return not grammemes or grammemes <= INDECLINABLE_TAGS
+
+
 def parse_grammemes(spec):
     """'masc, accs' / 'masc accs' -> frozenset({'masc', 'accs'})."""
     return frozenset(g.lower() for g in re.split(r'[\s,]+', spec) if g)
@@ -128,8 +165,9 @@ def choose_parse(word, parses, grammemes, where, ambiguities=None):
     matching = [p for p in parses if grammemes <= tag_grammemes(p)]
     if not matching:
         raise ValueError(
-            "%s: no parse of %r has {%s}; available parses:\n%s"
-            % (where, word, ' '.join(sorted(grammemes)), format_parses(parses)))
+            "%s: no parse of %r has {%s}; available parses:\n%s\n"
+            "(If the analyzer simply lacks the word, give it a `glosses:` entry: `%s: {lemma: ...}`.)"
+            % (where, word, ' '.join(sorted(grammemes)), format_parses(parses), word.lower()))
     if len(set(analysis_key(p) for p in matching)) > 1:
         print("[ambiguous] %s: {%s} still fits several analyses of %r, using the first:\n%s"
               % (where, ' '.join(sorted(grammemes)), word, format_parses(matching)),

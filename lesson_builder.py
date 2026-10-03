@@ -126,7 +126,8 @@ def _apply_override(result, word, key, entry, where):
     return result
 
 
-def _parse_token(word, morph, isv_dict, annotation=None, where='', ambiguities=None, overrides=None):
+def _parse_token(word, morph, isv_dict, annotation=None, where='', ambiguities=None, overrides=None,
+                 indeclinable=None):
     """Return a {'lemma': ..., 'morfemes': [{piece: tags}, ...]} dict (plus
     'gloss_key' if a glosses.py override applies, and 'sense' if the source
     says which dictionary sense is meant) for a recognised word, or None if
@@ -135,18 +136,22 @@ def _parse_token(word, morph, isv_dict, annotation=None, where='', ambiguities=N
     `annotation` (from a `{...}` after the word in the source) picks which of
     the word's parses to use and/or which sense it has; without grammemes the
     first parse is used and lemma/part-of-speech ambiguity is recorded in
-    `ambiguities`."""
+    `ambiguities`. A word slovnik lists only as an indeclinable word (see
+    wordsense.use_dictionary_form) isn't parsed at all: it is its own lemma."""
     if not word.isalpha():
         return None
     overrides = overrides or {}
     grammemes = annotation.grammemes if annotation else None
     early_key, early = glosses.lookup(overrides, word)
-    parses = morph.parse(word)
+    from_dictionary = wordsense.use_dictionary_form(word, grammemes, indeclinable)
+    parses = [] if from_dictionary else morph.parse(word)
     if not parses:
-        if early is None:
+        if early is None and not from_dictionary:
             return None
-        result = _apply_override({'lemma': word.lower(), 'morfemes': [{word: 'stem'}]},
-                                 word, early_key, early, where)
+        result = {'lemma': word.lower(), 'morfemes': [{word: 'stem'}]}
+        key, entry = glosses.lookup(overrides, word, result['lemma'])
+        if entry is not None:
+            _apply_override(result, word, key, entry, where)
     else:
         # an override that fixes the lemma or the split settles any ambiguity
         settled = early is not None and ('lemma' in early or 'morphemes' in early)
@@ -171,7 +176,8 @@ def _parse_token(word, morph, isv_dict, annotation=None, where='', ambiguities=N
     return result
 
 
-def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, overrides=None):
+def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, overrides=None,
+                           indeclinable=None):
     """Tokenize `text`, analyze every recognisable ISV word, and group the
     result into paragraphs (one per line break in the source), matching the
     shape of enhavo/netradukenda/tekstoj/NN.yml's `titolo`/`paragrafoj`.
@@ -185,7 +191,8 @@ def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, ov
     paragraphs = [[]]
     for token, token_whitespace in zip(tokens, whitespace):
         annotation = notes.pop(token.stop, None)
-        parsed = _parse_token(token.text, morph, isv_dict, annotation, where, ambiguities, overrides)
+        parsed = _parse_token(token.text, morph, isv_dict, annotation, where, ambiguities, overrides,
+                              indeclinable)
         if annotation is not None and parsed is None:
             raise ValueError("%s: {%s} follows %r, which isn't a word the analyzer knows"
                              % (where, wordsense.describe(annotation), token.text))
@@ -206,10 +213,11 @@ def tokenize_to_paragraphs(text, morph, isv_dict, where='', ambiguities=None, ov
     return [p for p in paragraphs if p]
 
 
-def build_teksto(source_md_path, dict_path=None, morph=None, overrides=None):
+def build_teksto(source_md_path, dict_path=None, morph=None, overrides=None, indeclinable=None):
     """Read a `# Title` + body Markdown source file and return a dict with
     `titolo` and `paragrafoj`, ready to be dumped as a lesson's teksto YAML.
-    `overrides` are the lesson's word overrides (see glosses.py)."""
+    `overrides` are the lesson's word overrides (see glosses.py); `indeclinable`
+    is wordsense.indeclinable_words(slovnik)."""
     with open(source_md_path, encoding='utf-8') as f:
         content = f.read()
 
@@ -225,8 +233,10 @@ def build_teksto(source_md_path, dict_path=None, morph=None, overrides=None):
     isv_dict = morph._units[0][0].dict
 
     ambiguities = wordsense.Ambiguities()
-    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict, source_md_path, ambiguities, overrides)
-    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict, source_md_path, ambiguities, overrides)
+    titolo_paragraphs = tokenize_to_paragraphs(title_text, morph, isv_dict, source_md_path, ambiguities, overrides,
+                                                indeclinable)
+    paragrafoj = tokenize_to_paragraphs(body_text, morph, isv_dict, source_md_path, ambiguities, overrides,
+                                       indeclinable)
     ambiguities.print(source_md_path)
 
     titolo = titolo_paragraphs[0] if titolo_paragraphs else []

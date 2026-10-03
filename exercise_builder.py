@@ -102,6 +102,7 @@ class Glosser(object):
         self.overrides = overrides or {}    # glosses.py entries for this lesson
         self.fasado = fasado or {}          # UI strings, for interface-string glosses
         self.untranslated = set()           # {(interface string, language)}
+        self._indeclinable = None
 
     def _by_lemma(self):
         if self._rows is None:
@@ -116,6 +117,10 @@ class Glosser(object):
         None if it has no parse. `grammemes` (from a `{...}` annotation)
         picks the parse; the lemma is then worked out as for lesson texts
         (wordsense.lemma_of)."""
+        if self._indeclinable is None:
+            self._indeclinable = wordsense.indeclinable_words(self._slovnik)
+        if wordsense.use_dictionary_form(word, grammemes, self._indeclinable):
+            return word.lower()       # slovnik knows it only as an indeclinable word
         morph = self._get_morph()
         parses = morph.parse(word)
         if not parses:

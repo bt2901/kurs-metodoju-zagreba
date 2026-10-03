@@ -8,8 +8,14 @@
 glosses:
   ziťju:                     # is it in slovnik? it's complicated
     lemma: žiti
+  slab:                     # is it in slovnik? it's complicated
+    lemma: slaby
   imamo:                  # dirty spot-fix
-    lemma: imati
+    lemma: "iměti, imati"
+  imal:                  # dirty spot-fix
+    lemma: "iměti, imati"
+  oddyha:
+    lemma: oddyh
   pardon:                    # not in slovnik
     gloss:
       en: [excuse me, sorry]

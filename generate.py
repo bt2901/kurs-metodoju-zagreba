@@ -14,6 +14,7 @@ import leo_markdown
 import lesson_builder
 import exercise_builder
 import glosses
+import wordsense
 import layout
 from layout import TOTAL_N
 import pickle
@@ -146,6 +147,7 @@ def load(language, gramatiko_transpose_headlines=2):
     enhavo['post'] = open(path, encoding="utf8").read()
     enhavo['post'] = transpose_headlines(enhavo['post'], 2)
 
+    indeclinable = wordsense.indeclinable_words(slovnik)
     lecionoj = []
     vortoj = {}
     etm_morph = None
@@ -180,7 +182,8 @@ def load(language, gramatiko_transpose_headlines=2):
         if os.path.exists(source_md_path):
             if etm_morph is None:
                 etm_morph = lesson_builder.get_etm_analyzer()
-            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph, overrides=overrides)
+            teksto = lesson_builder.build_teksto(source_md_path, morph=etm_morph, overrides=overrides,
+                                                 indeclinable=indeclinable)
             with open(path, 'w', encoding='utf8') as f:
                 yaml.dump(teksto, f, allow_unicode=True, default_flow_style=False)
 

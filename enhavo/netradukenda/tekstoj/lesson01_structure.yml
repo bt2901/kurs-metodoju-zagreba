@@ -24,6 +24,8 @@ glosses:
   kapučino:                  # not in slovnik; the analyzer reads it as an adjective
     lemma: kapučino
     gloss: {en: cappuccino, ru: капучино, hr: kapučino}
+  vaše:
+    lemma: vaš
   sendvič:
     lemma: sendvič
     gloss: {en: sandwich, ru: сэндвич, hr: sendvič}
